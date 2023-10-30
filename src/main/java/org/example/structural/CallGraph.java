@@ -19,19 +19,27 @@ public class CallGraph {
     }
 
     //A chaque ajout de classe on crée une nouvelle map qui lui est associée
-    // et on cherche les couplages avec les autres classes
-
     public void addClassNode(TypeDeclaration clazz) {
         classNodes.put(clazz, new HashMap<>());
     }
 
-    public void findCouplage(){
-        for (TypeDeclaration t : classNodes.keySet()){
-            for (MethodDeclaration m : t.getMethods()){
+    //chercher les couplages avec les autres classes
+    public static void findCouplage(TypeDeclaration c){
+        //pour chaque methode de la classe
+            for (MethodDeclaration m : c.getMethods()){
+                //on visite la methode
                 MethodDeclarationVisitor methodDeclarationVisitor = new MethodDeclarationVisitor();
                 m.accept(methodDeclarationVisitor);
+                //on recupere les methodes appelees
+                List<MethodDeclaration> methods = methodDeclarationVisitor.getMethods();
+                //pour chaque methode appelee
+                for (MethodDeclaration m2 : methods){
+                    //on recupere la classe a laquelle elle appartient
+                    TypeDeclaration c2 = (TypeDeclaration) m2.getParent();
+                    //on ajoute le couplage
+                    addCouplage(c, c2);
+                }
             }
-        }
     }
 
     public int calcCouplage(String c1, String c2){
@@ -65,6 +73,28 @@ public class CallGraph {
 
         return this;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     public String toString() {
         StringBuilder sb = new StringBuilder();

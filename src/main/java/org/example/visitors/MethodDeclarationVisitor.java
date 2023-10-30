@@ -9,7 +9,7 @@ public class MethodDeclarationVisitor extends AbstractVisitor {
 	private List<MethodDeclaration> methods = new ArrayList<MethodDeclaration>();
 
 	public boolean visit(MethodDeclaration node) {
-		hasVisited = true;
+//		hasVisited = true;
 		methods.add(node);
 
 		return super.visit(node);

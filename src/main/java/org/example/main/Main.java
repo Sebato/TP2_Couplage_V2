@@ -1,7 +1,15 @@
 package org.example.main;
 
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.example.process.Analyzer;
+
+import java.util.ArrayList;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello world!");
+
+        Analyzer analyzer = new Analyzer();
+
+
     }
 }

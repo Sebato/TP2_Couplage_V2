@@ -10,21 +10,16 @@ import java.util.Map;
 public class ClassDeclarationVisitor extends AbstractVisitor {
 	private Map<String, TypeDeclaration> types = new HashMap<>();
 
-
-	
 	public boolean visit(TypeDeclaration node) {
 		if(!node.isInterface()) {
 			types.put(node.getName().getFullyQualifiedName(), node);
-			hasVisited = true;
 		}
-
 		return super.visit(node);
 	}
 	
 	public Map<String, TypeDeclaration> getTypes() {
 		return types;
 	}
-
 	public TypeDeclaration getclassByName(String name) {
 		return types.get(name);
 	}

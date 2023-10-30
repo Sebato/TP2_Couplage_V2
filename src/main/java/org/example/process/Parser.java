@@ -3,6 +3,7 @@ package org.example.process;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
+import org.example.Config.Config;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,9 +13,9 @@ public class Parser {
 
 	public static CompilationUnit parse(File fileEntry) throws IOException {
 		ASTParser parser = ASTParser.newParser(AST.JLS4); // java +1.6
+
 		parser.setResolveBindings(true);
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
- 
 		parser.setBindingsRecovery(true);
  
 		Map options = JavaCore.getOptions();
