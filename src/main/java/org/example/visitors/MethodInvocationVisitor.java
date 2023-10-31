@@ -17,6 +17,4 @@ public class MethodInvocationVisitor extends AbstractVisitor {
     public List<MethodInvocation> getMethodInvocations() {
         return methodInvocations;
     }
-
-
 }

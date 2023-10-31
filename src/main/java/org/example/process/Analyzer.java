@@ -15,17 +15,18 @@ import java.util.Map;
 
 
 public class Analyzer {
-
     private final ProjectHandler ph = new ProjectHandler();
-    private final ArrayList<CompilationUnit>CUnits;
+    private final ArrayList<CompilationUnit> CUnits;
     private HashMap<String, ASTVisitor> visitors;
     private ClassDeclarationVisitor visitor = new ClassDeclarationVisitor();
+    public CallGraph cg;
 
 
     public Analyzer() {
         this.visitors = new HashMap<>();
         this.CUnits = new ArrayList<>();
 //        this.visitor = new ClassDeclarationVisitor();
+        this.cg = new CallGraph();
     }
 
     public ArrayList<CompilationUnit> getCUnits() {
@@ -34,8 +35,8 @@ public class Analyzer {
 
     public ASTVisitor getVisitor(String type) {
         ASTVisitor visitor = visitors.get(type);
-        if(visitor == null){
-            switch (type){
+        if (visitor == null) {
+            switch (type) {
                 case "class":
                     visitor = new ClassDeclarationVisitor();
                     break;
@@ -56,56 +57,65 @@ public class Analyzer {
         return visitor;
     }
 
+    //get compilation Units from the project
     public void initUnits() throws IOException {
+        System.out.println("\n\tInitializing Compilation Units");
         for (File f : ph.getJavaFiles()) {
-            this.CUnits.add(Parser.parse(f));
+            System.out.println("\n\t\t" + f.getName());
+            this.CUnits.add(ProjectHandler.parse(f));
         }
     }
 
-    //Parse every file/Class in the project
-    public void parseUnits(){
+    //Parse every file/Class in the project, the visitor will store every TypeDeclaration we have
+    public void parseUnits() {
+        System.out.println("\n\tParsing Compilation Units");
         for (CompilationUnit CUnit : CUnits) {
-            CUnit.accept(visitor);
+            CUnit.accept(this.visitor);
         }
     }
 
+    //initialize the call graph with all the classes we've parsed
+    public void initCallGraph() throws IOException {
+        System.out.println("\n\tInitializing Call Graph");
+        for (TypeDeclaration type : visitor.getClasses()) {
+            cg.addClassNode(type);
+        }
+    }
 
-    //TODO
-    //Pour chaque classe,
-    //  récupèrer méthodes
+    //find all the couplings between classes
+    public void findCouplages() {
+        cg.findCouplages();
+    }
 
-    //  pour chaque méthode,
-    //      récupèrer les appels de méthodes
+    //do all in one go
+    public void ProcessAll() throws IOException {
+        System.out.println("\n\tInitializing Compilation Units");
+        for (File f : ph.getJavaFiles()) {
+            System.out.println("\n\t\t" + f.getName());
+            CompilationUnit tmpCU = ProjectHandler.parse(f);
+            this.CUnits.add(tmpCU);
+            tmpCU.accept(this.visitor);
+        }
 
-    //  pour chaque appel de méthode,
-    //      récupèrer la classe solliscitée
+        //at this point : all classes registered in the visitor
 
-    //  pour chaque classe solliscitée,
-    //      ajouter un lien entre la classe courante et la classe solliscitée
+        for (TypeDeclaration type : visitor.getClasses()) {
+            cg.addClassNode(type);
+            //cg.addNodeToBindings(type);
+        }
 
+        //at this point : all classes registered in the call graph
 
+        cg.findCouplages();
 
-
-
-
-
-
-
+        //should have the values of the couplings between classes here
 
 
-//    //Merge every call graph of each class
-//    public CallGraph buildCallGraph() throws IOException {
-//        CallGraph graph = new CallGraph();
-//
-//        for(TypeDeclaration type: visitor.getClasses()) {
-//            //graph.addNode(buildClassCallGraph(type));
-//        }
-//
-//        //graph.toMutableGraph();
-//        return graph;
-//    }
 
-    //Create and return the call graph of a class
+    }
+}
+
+//Create and return the call graph of a class
 //    public Map<TypeDeclaration, Map<TypeDeclaration, Integer>> buildClassCallGraph(TypeDeclaration clazz){
 //        Map<TypeDeclaration, Map<TypeDeclaration, Integer>> node = new HashMap<>();
 //        for(MethodDeclaration method: clazz.getMethods()) {
@@ -183,4 +193,3 @@ public class Analyzer {
 //
 //    }
 
-}

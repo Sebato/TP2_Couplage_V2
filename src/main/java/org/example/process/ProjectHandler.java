@@ -1,12 +1,22 @@
 package org.example.process;
 
+import org.apache.commons.io.FileUtils;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.example.Config.Config;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class ProjectHandler {
 
     private ArrayList<File> javaFiles;
-    public static String projectSourcePath =  "/home/e20170009949/IdeaProjects/SimpleTestProject/src";
+//    public static String projectSourcePath =  "/home/e20170009949/IdeaProjects/SimpleTestProject/src";
+    public static String projectSourcePath =  "/home/seb/IdeaProjects/TestJavaProject/src";
 
     ProjectHandler(){
         javaFiles = new ArrayList<File>();
@@ -47,8 +57,29 @@ public class ProjectHandler {
     @Override
     public String toString() {
         return "ProjectHandler{" +
-                "\nPath : "+ projectSourcePath +
-                "\njavaFiles=" + javaFiles +
+                "\n\tPath : "+ projectSourcePath +
+                "\n\tjavaFiles=" + javaFiles +
                 "\n}";
+    }
+
+    public static CompilationUnit parse(File fileEntry) throws IOException {
+        ASTParser parser = ASTParser.newParser(AST.JLS4); // java +1.6
+
+        parser.setResolveBindings(true);
+        parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        parser.setBindingsRecovery(true);
+
+        Map options = JavaCore.getOptions();
+        parser.setCompilerOptions(options);
+
+        parser.setUnitName("parserUnit");
+
+        String[] sources = { projectSourcePath };
+        String[] classpath = { System.getProperty("java.home") };
+
+        parser.setEnvironment(classpath, sources, new String[] { "UTF-8"}, true);
+        parser.setSource(FileUtils.readFileToString(fileEntry).toCharArray());
+
+        return (CompilationUnit) parser.createAST(null); // create and parse
     }
 }
