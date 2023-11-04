@@ -17,18 +17,18 @@ public class Analyzer {
     public CallGraph cg;
 
 
-    public Analyzer() {
+    public Analyzer(CallGraph cg) {
         this.ph = new ProjectHandler();
         this.visitors = new HashMap<>();
         this.CUnits = new ArrayList<>();
-        this.cg = new CallGraph();
+        this.cg = cg;
     }
 
-    public Analyzer(String path) {
+    public Analyzer(CallGraph cg, String path) {
         this.ph = new ProjectHandler(path);
         this.visitors = new HashMap<>();
         this.CUnits = new ArrayList<>();
-        this.cg = new CallGraph();
+        this.cg = cg;
     }
 
     public ArrayList<CompilationUnit> getCUnits() {
@@ -125,7 +125,7 @@ public class Analyzer {
 
         //at this point : the values of the couplings between classes are in the CG Map
 
-        cg.printCoupling();
+        //cg.printCoupling();
 
         //at this point : Couplings printed
 
@@ -135,7 +135,4 @@ public class Analyzer {
 
         cg.createGraph();
     }
-
-
-
 }
