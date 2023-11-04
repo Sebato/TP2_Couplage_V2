@@ -13,7 +13,7 @@ public class Main {
         CallGraph cg = new CallGraph();
 
         Scanner sc = new Scanner(System.in);
-        System.out.println("Please enter the path of the project you want to analyze : ");
+        System.out.println("veuillez entrer le chemin du projet que vous souhaitez analyser : ");
         String path = sc.nextLine();
 
         if (path.isEmpty()) {
@@ -22,17 +22,12 @@ public class Main {
             analyzer = new Analyzer(cg,path);
         }
 
-//        analyzer.initUnits();
-//        analyzer.parseUnits();
-//        analyzer.initCallGraph();
-//        analyzer.findCouplages();
-//        analyzer.printGraph();
-//        analyzer.allCouplages();
-
         analyzer.processAll();
+        cg.createGraph();
 
-        //cg.createGraph();
-        cg.exportGraphToDot();
+        String outPath = System.getProperty("user.dir")+"/g.dot";
+        cg.exportGraphToDot(outPath);
+
 
     }
 }

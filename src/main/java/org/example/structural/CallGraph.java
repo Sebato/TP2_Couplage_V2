@@ -2,21 +2,21 @@ package org.example.structural;
 
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.jdt.core.dom.*;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.example.visitors.MethodDeclarationVisitor;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
-import org.jgrapht.nio.dimacs.DIMACSExporter;
+import org.jgrapht.nio.Attribute;
+import org.jgrapht.nio.DefaultAttribute;
+import org.jgrapht.nio.ExportException;
 import org.jgrapht.nio.dot.DOTExporter;
 
-import java.io.File;
-import java.io.OutputStream;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.*;
 
 public class CallGraph {
 
@@ -113,10 +113,10 @@ public class CallGraph {
 //    aux deux classes en question
 //    (A.mi et B.mj) / nombre de toutes  les  relations (binaire)
 //    entre  les  couples  de  méthodes  appartenant respectivement
-//    à n’importe quelles deux classesde l’application analysée
+//    à n’importe quelles deux classes de l’application analysée
 
-    public int calcCouplage(String c1, String c2){
-        int couplage = 0;
+    public float calcCouplage(String c1, String c2){
+        float couplage = 0;
 
         Map<String, Integer> c1Calls = new HashMap<>();
         Map<String, Integer> c2Calls = new HashMap<>();
@@ -143,7 +143,7 @@ public class CallGraph {
                 couplage += c2Calls.get(c1);
             }
         }
-        return couplage;
+        return  couplage / totalCouplage;
     }
 
     public void allCouplages(){
@@ -162,7 +162,7 @@ public class CallGraph {
 
                 if (!s1.equals(s2)){
                     if(!done.contains(new MutablePair<>(s1,s2)) && !done.contains(new MutablePair<>(s2,s1))) {
-                        System.out.println("Couplage entre (" + s1 + " et " + s2 + ") = " + calcCouplage(s1, s2));
+                        //System.out.println("Couplage entre (" + s1 + " et " + s2 + ") = " + calcCouplage(s1, s2));
                         done.add(new MutablePair<>(s1,s2));
                     }
                 }
@@ -170,6 +170,7 @@ public class CallGraph {
         }
     }
 
+    //pas utile si on affiche déja dans allCouplages()
     public void printCoupling() {
         System.out.println("\n---------\nCouplages : \n");
         for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
@@ -180,7 +181,6 @@ public class CallGraph {
         }
     }
 
-    //using JGraphT to create the Weighted graph
     public void createGraph(){
 
         String som1;
@@ -195,7 +195,7 @@ public class CallGraph {
 
             graph.addVertex(entry.getKey().resolveBinding().getQualifiedName().substring(entry.getKey().resolveBinding().getQualifiedName().lastIndexOf(".")+1));
         }
-
+        System.out.println("\n---------\nGraph vertices : \n" + graph.vertexSet());
         //une fois que tous les sommets sont ajoutés, on ajoute les arêtes
         for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
 
@@ -209,13 +209,15 @@ public class CallGraph {
 
                 //vérifier si on à pas déjà l'arête dans l'autre sens
                 if (!graph.containsEdge(som1, som2) || !graph.containsEdge(som2, som1)) {
+                    System.out.println("Adding edge between " + som1 + " and " + som2);
                     e = graph.addEdge(som1, som2);
-                    graph.setEdgeWeight(e, entry2.getValue());
+                    graph.setEdgeWeight(e, (double) entry2.getValue() /totalCouplage);
                 }
                 else {
+                    System.out.println("Edge between " + som1 + " and " + som2 + " already exists");
                     //sinon l'a déjà on incrémente juste le poids de l'arête
                     e = graph.getEdge(som2, som1);
-                    graph.setEdgeWeight(e,graph.getEdgeWeight(graph.getEdge(som2, som1)) + entry2.getValue());
+                    graph.setEdgeWeight(e,graph.getEdgeWeight(graph.getEdge(som2, som1)) + (double) entry2.getValue() /totalCouplage);
                 }
             }
         }
@@ -226,37 +228,31 @@ public class CallGraph {
         }
     }
 
-    //export graph in dot format with weights using DimacsExporter
-    public void exportGraphToDot(){
-        //Exporter
-        DIMACSExporter<String, DefaultWeightedEdge> exporter = new DIMACSExporter<String, DefaultWeightedEdge>();
+    //export graph in dot format with weights
+    public void exportGraphToDot( String outputPath) {
+        DOTExporter<String, DefaultWeightedEdge> exporter = new DOTExporter<>();
 
-        //Output stream
-        Writer writer = new StringWriter();
-        exporter.exportGraph(graph, writer);
+        //set vertex id with lambdas
+        exporter.setVertexIdProvider((v) -> v);
 
-        //Print
-        System.out.println("\n---------\nDot : \n");
-        System.out.println(writer.toString());
+        //make sure the weights are printed
+        exporter.setEdgeAttributeProvider((e) -> {
+            Map<String, Attribute> map = new LinkedHashMap<>();
+            map.put("weight", DefaultAttribute.createAttribute(graph.getEdgeWeight(e)));
+            map.put("label", DefaultAttribute.createAttribute(new DecimalFormat("#.##").format(graph.getEdgeWeight(e))));
+            return map;
+        });
 
-    }
-
-/*    public MutableGraph toMutableGraph(String name) throws IOException {
-        MutableGraph graph = Factory.mutGraph("callGraph").setDirected(true);
-        for (Map.Entry<MethodDeclaration, List<String>> entry : nodes.entrySet()) {
-            String caller = entry.getKey().resolveBinding().getDeclaringClass().getName() + "." + entry.getKey().getName();
-            graph.add(Factory.mutNode(caller));
-            for(String calledMethod : entry.getValue()){
-                graph.add(Factory.mutNode(calledMethod));
-                graph.add(Factory.mutNode(caller).addLink(Factory.mutNode(calledMethod)));
-            }
+        try {
+            FileWriter fileWriter = new FileWriter(outputPath);
+            exporter.exportGraph(graph, fileWriter);
+            System.out.println("\n----------Graphe exporté ici : " + outputPath);
+            System.out.println("\n Pour en générer un fichier PDF, tapez la commande suivante " +
+                    "dans un terminal ouvert à l'endroit où vous souhaitez l'enregistrer : " +
+                    "\ndot -Tpdf "+outputPath+" -o <leNomDeVotreGraphe>.pdf\n");
+            fileWriter.close();
+        } catch (ExportException | IOException e) {
+            e.printStackTrace();
         }
-
-        Graphviz viz = Graphviz.fromGraph(graph);
-
-        viz.render(Format.SVG).toFile(new File("Graphs/"+name+".svg"));
-        viz.rasterize(Rasterizer.builtIn("pdf")).toFile(new File("Graphs/"+name+".pdf"));
-        return graph;
-    }*/
-
+    }
 }
