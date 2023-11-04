@@ -1,7 +1,5 @@
 package org.example.process;
 
-
-import org.example.Config.Config;
 import org.example.visitors.*;
 import org.eclipse.jdt.core.dom.*;
 import org.example.structural.CallGraph;
@@ -10,22 +8,26 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 
 public class Analyzer {
-    private final ProjectHandler ph = new ProjectHandler();
+    private final ProjectHandler ph;
     private final ArrayList<CompilationUnit> CUnits;
-    private HashMap<String, ASTVisitor> visitors;
-    private ClassDeclarationVisitor visitor = new ClassDeclarationVisitor();
+    private final HashMap<String, ASTVisitor> visitors;
+    private final ClassDeclarationVisitor visitor = new ClassDeclarationVisitor();
     public CallGraph cg;
 
 
     public Analyzer() {
+        this.ph = new ProjectHandler();
         this.visitors = new HashMap<>();
         this.CUnits = new ArrayList<>();
-//        this.visitor = new ClassDeclarationVisitor();
+        this.cg = new CallGraph();
+    }
+
+    public Analyzer(String path) {
+        this.ph = new ProjectHandler(path);
+        this.visitors = new HashMap<>();
+        this.CUnits = new ArrayList<>();
         this.cg = new CallGraph();
     }
 
@@ -33,7 +35,7 @@ public class Analyzer {
         return CUnits;
     }
 
-    public ASTVisitor getVisitor(String type) {
+/*    public ASTVisitor getVisitor(String type) {
         ASTVisitor visitor = visitors.get(type);
         if (visitor == null) {
             switch (type) {
@@ -55,7 +57,7 @@ public class Analyzer {
             visitors.put(type, visitor);
         }
         return visitor;
-    }
+    }*/
 
     //get compilation Units from the project
     public void initUnits() throws IOException {
@@ -74,11 +76,11 @@ public class Analyzer {
         }
     }
 
-    //initialize the call graph with all the classes we've parsed
+    //initialize the call graph Map with all the classes we've parsed
     public void initCallGraph() throws IOException {
-        System.out.println("\n\tInitializing Call Graph");
+        System.out.println("\n\tInitializing Call Graph ClassMap");
         for (TypeDeclaration type : visitor.getClasses()) {
-            cg.addClassNode(type);
+            cg.addClassKey(type);
         }
     }
 
@@ -87,109 +89,53 @@ public class Analyzer {
         cg.findCouplages();
     }
 
-    //do all in one go
-    public void ProcessAll() throws IOException {
-        System.out.println("\n\tInitializing Compilation Units");
+    //print the coupling between classes
+    public void printCoupling() {
+        cg.printCoupling();
+    }
+
+    public void allCouplages() {
+        cg.allCouplages();
+    }
+
+    //do it all in one go
+    public void processAll() throws IOException {
+        //System.out.println("\n\tInitializing Compilation Units");
         for (File f : ph.getJavaFiles()) {
-            System.out.println("\n\t\t" + f.getName());
-            CompilationUnit tmpCU = ProjectHandler.parse(f);
-            this.CUnits.add(tmpCU);
-            tmpCU.accept(this.visitor);
+            //System.out.println("\n\t\t" + f.getName());
+            this.CUnits.add(ProjectHandler.parse(f));
+        }
+
+        //at this point : all files parsed and stored in CUnits
+
+        //System.out.println("\n\tParsing Compilation Units");
+        for (CompilationUnit CUnit : CUnits) {
+            CUnit.accept(this.visitor);
         }
 
         //at this point : all classes registered in the visitor
 
         for (TypeDeclaration type : visitor.getClasses()) {
-            cg.addClassNode(type);
-            //cg.addNodeToBindings(type);
+            cg.addClassKey(type);
         }
 
-        //at this point : all classes registered in the call graph
+        //at this point : all classes registered in the CG Map
 
         cg.findCouplages();
 
-        //should have the values of the couplings between classes here
+        //at this point : the values of the couplings between classes are in the CG Map
 
+        cg.printCoupling();
 
+        //at this point : Couplings printed
 
+        cg.allCouplages();
+
+        //at this point : the couplings between classes have been displayed
+
+        cg.createGraph();
     }
+
+
+
 }
-
-//Create and return the call graph of a class
-//    public Map<TypeDeclaration, Map<TypeDeclaration, Integer>> buildClassCallGraph(TypeDeclaration clazz){
-//        Map<TypeDeclaration, Map<TypeDeclaration, Integer>> node = new HashMap<>();
-//        for(MethodDeclaration method: clazz.getMethods()) {
-//            MethodInvocationVisitor methodInvocationVisitor = new MethodInvocationVisitor();
-//            method.accept(methodInvocationVisitor);
-//            Map<TypeDeclaration, Integer> relation = new HashMap<>();
-//            List<MethodInvocation> methodInvocations = methodInvocationVisitor.getMethodInvocations();
-//            List<String> calledMethods = new ArrayList<>();
-//            for(MethodInvocation methodInvocation: methodInvocations) {
-//                Expression expression = methodInvocation.getExpression();
-//                ITypeBinding typeBinding;
-//                if(expression == null) {
-//                    // appel de méthode avec 'this' implicite
-//                    typeBinding = clazz.resolveBinding();
-//                } else {
-//                    typeBinding = expression.resolveTypeBinding();
-//                }
-//                if(typeBinding != null) {
-//                    // on ne s'interesse pas aux classes à l'exterieur du projet
-//                    if(isTypeInProject(typeBinding.getName())) continue;
-//                    String calleeFullName = typeBinding.getName();
-//                    calledMethods.add(calleeFullName + "." + methodInvocation.getName().getIdentifier());
-//                } else {
-//                    // suite d'appels de méthodes i.e. m1().m2().m3();
-//                    // le type de m1().m2() ne peut pas être déduit
-//                    if(expression != null && !expression.toString().contains(".")) {
-//                        if (!isTypeInProject(expression.toString())) continue;
-//                        calledMethods.add(expression + "." + methodInvocation.getName().getIdentifier());
-//                    }
-//                    else
-//                        calledMethods.add(methodInvocation.getName().toString());
-//                    calledMethods.add(methodInvocation.getName().toString());
-//                }
-//            }
-//            graph.addNode(method, calledMethods);
-//        }
-//        return node;
-//
-//    }
-
-//
-//    public boolean isTypeInProject(String name){
-//        return visitor.getclassByName(name) != null;
-//    }
-//
-//
-//
-//    public TypeDeclaration getClassByName(String name){
-//        return visitor.getclassByName(name);
-//    }
-//
-//    //Find and return all file in a directory
-//
-//
-//    //Check if we already have the desired visitor and return it if yes otherwise return a new one
-//
-//
-//    //Visit every file with a visitor
-//    public void visitProject() throws IOException {
-//        if(!this.visitor.hasVisited()){
-//            for (File fileEntry : javaFiles) {
-//                CompilationUnit parse = Parser.parse(fileEntry);
-//                parse.accept(visitor);
-//            }
-//        }
-//    }
-//
-//    public void run() throws IOException {
-//        ArrayList<CompilationUnit> CUnits = new ArrayList<>();
-//
-//        for (File f : javaFiles) {
-//            CUnits.add(Parser.parse(f));
-//        }
-//
-//
-//    }
-

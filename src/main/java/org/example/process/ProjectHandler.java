@@ -5,7 +5,6 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.example.Config.Config;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +19,12 @@ public class ProjectHandler {
 
     ProjectHandler(){
         javaFiles = new ArrayList<File>();
+        initProjectStructure();
+    }
+
+    ProjectHandler(String path){
+        javaFiles = new ArrayList<File>();
+        projectSourcePath = path;
         initProjectStructure();
     }
 

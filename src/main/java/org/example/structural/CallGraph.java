@@ -2,32 +2,46 @@ package org.example.structural;
 
 import org.eclipse.jdt.core.dom.*;
 import org.example.visitors.MethodDeclarationVisitor;
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleWeightedGraph;
 
-import javax.print.attribute.standard.Finishings;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class CallGraph {
 
-    //chaque classe sera associée à une map qui contiendra les classes qu'elle appelle et le nombre d'appel à ces dernieres
-    private Map<TypeDeclaration,Map<TypeDeclaration, Integer>> classNodes = new HashMap<>();
+    //chaque classe sera associée à une map qui contiendra
+    // les classes qu'elle appelle et
+    // le nombre d'appel à ces dernieres
+    private Map<TypeDeclaration,Map<String, Integer>> classMap = new HashMap<>();
+    private int totalCouplage = 0;
+
+    public SimpleWeightedGraph<String, DefaultWeightedEdge> graph =
+            new SimpleWeightedGraph<String, DefaultWeightedEdge>
+                    (DefaultWeightedEdge.class);
 
     public CallGraph() {
-        classNodes = new HashMap<>();
+        classMap = new HashMap<>();
+    }
+
+
+    public int getTotalCouplage() {
+        return totalCouplage;
     }
 
     //A chaque ajout de classe on crée une nouvelle map qui lui est associée
-    public void addClassNode(TypeDeclaration Cnode) {
-        if (!classNodes.containsKey(Cnode)) {
-            classNodes.put(Cnode, new HashMap<>());
-        }else System.out.println("Class "+ Cnode.getName() +" is already in the ClassMap");
+    public void addClassKey(TypeDeclaration Ckey) {
+        if (!classMap.containsKey(Ckey)) {
+            classMap.put(Ckey, new HashMap<>());
+        }
+//        else System.out.println("Class "+ Ckey.getName() +" is already in the ClassMap");
     }
 
     //après initialisation des classes, on cherche les couplages entre elles
     public void findCouplages(){
         //pour chaque classe
-        for (TypeDeclaration c : this.classNodes.keySet()){
+        for (TypeDeclaration c : this.classMap.keySet()){
+            //System.out.println("\n--------- Class : " + c.getName().getFullyQualifiedName());
 
             //pour chaque methode de cette classe
             for (MethodDeclaration m : c.getMethods()){
@@ -39,86 +53,135 @@ public class CallGraph {
                 //pour toutes les methodes invoquées, on ajoute un couplage entre la classe courante et la classe invoquée
                 for (MethodInvocation mi : methodDeclarationVisitor.getMethodsCalled()){
 
-                    System.out.println("\nMethod " + m.getName().getFullyQualifiedName() +
-                            " calls " + mi.getName().getFullyQualifiedName());
+//                    System.out.println("\n--Method : " + m.getName().getFullyQualifiedName() +
+//                            " calls : " + mi.getName().getFullyQualifiedName());
 
-                    System.out.println(mi);
-                    System.out.println(mi.getExpression());
-                    System.out.println(mi.getExpression().resolveTypeBinding());
+                    if (mi.getExpression() != null) { // c'est null quand appel à this implicite par exemple
 
-                    if (mi.resolveMethodBinding() != null) {
-                        System.out.println(" from " + mi.resolveMethodBinding().getDeclaringClass().getName());
-                        addCouplage(c, (TypeDeclaration) mi.resolveMethodBinding().getDeclaringClass());
+                        if (mi.getExpression().resolveTypeBinding() != null) {
+                            //System.out.println(" from " + mi.getExpression().resolveTypeBinding().getName());
+                            addCouplage(c, mi.getExpression().resolveTypeBinding().getName());
+                        }
+//                        else System.err.println("resolveTypeBinding() returned null for " + mi.getExpression().toString());
                     }
                 }
             }
         }
     }
 
-    private void addCouplage(TypeDeclaration c, TypeDeclaration c2) {
+    // ajoute un couplage entre la classe C et la classe C2
+    // et incrémente le couplage total
+    private void addCouplage(TypeDeclaration c, String c2) {
+        //System.out.println("Adding coupling between " + c.getName() + " and " + c2);
+
         //on n'ajoute pas de couplage réflexif
-        if (c != c2){
+        if (!c2.equals(c.getName().toString())){
 
             //si la classe C n'est pas deja dans la map on l'ajoute
             // (mais c'est bizarre si elle y est pas)
-            if (!classNodes.containsKey(c))
-                addClassNode(c);
-
-            //pareil pour C2
-            if (!classNodes.containsKey(c2))
-                addClassNode(c2);
+            if (!classMap.containsKey(c))
+                addClassKey(c);
 
             //si la classe C2 n'est pas deja dans la map de la classe C on l'ajoute
-            if (!classNodes.get(c).containsKey(c2))
-                classNodes.get(c).put(c2, 1);
+            if (!classMap.get(c).containsKey(c2))
+                classMap.get(c).put(c2, 1);
             else //sinon on incrémente le nombre d'appel
-                classNodes.get(c).put(c2, classNodes.get(c).get(c2)+1);
+                classMap.get(c).put(c2, classMap.get(c).get(c2)+1);
+
+            //on incrémente le nombre total de couplages
+            totalCouplage++;
         }
     }
 
-//    public int calcCouplage(String c1, String c2){
-//        int couplage =0;
-//        //Add nb appelle method c1 from c2
-//        if (classNodes.containsKey(c1))
-//            if (classNodes.get(c1).containsKey(c2))
-//                couplage += classNodes.get(c1).get(c2);
-//
-//        //Add nb appelle method c2 from c1
-//        if (classNodes.containsKey(c2))
-//            if (classNodes.get(c2).containsKey(c1))
-//                couplage += classNodes.get(c2).get(c1);
-//
-//        return couplage/totalCouplage;
-//    }
+//    Couplage (A,B) = Nombre de relations (relation = appel)
+//    entre les couples de méthodes appartenant respectivement
+//    aux deux classes en question
+//    (A.mi et B.mj) / nombre de toutes  les  relations (binaire)
+//    entre  les  couples  de  méthodes  appartenant respectivement
+//    à n’importe quelles deux classesde l’application analysée
 
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("CallGraph{");
-        for (Map.Entry<TypeDeclaration, Map<TypeDeclaration, Integer>> entry : classNodes.entrySet()) {
-            sb.append(entry.getKey().resolveBinding().getQualifiedName()).append(" -> ");
-            for (Map.Entry<TypeDeclaration, Integer> entry2 : entry.getValue().entrySet()) {
-                sb.append(entry2.getKey().resolveBinding().getQualifiedName()).append(" (").append(entry2.getValue()).append("), ");
+    public int calcCouplage(String c1, String c2){
+        int couplage = 0;
+
+        Map<String, Integer> c1Calls = new HashMap<>();
+        Map<String, Integer> c2Calls = new HashMap<>();
+
+        for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+            if (entry.getKey().getName().toString().equals(c1))
+                c1Calls = entry.getValue();
+            if (entry.getKey().getName().toString().equals(c2))
+                c2Calls = entry.getValue();
+        }
+
+        //si les deux classes appartiennent bien au projet
+        if (!c1Calls.isEmpty() && !c2Calls.isEmpty()) {
+
+            //on récupère les classes appelées par la classe c1
+            if (c1Calls.containsKey(c2)) {
+                couplage += c1Calls.get(c2);
             }
-            sb.append("\n");
+            //idem pour c2
+            if (c2Calls.containsKey(c1)) {
+                couplage += c2Calls.get(c1);
+            }
         }
-        return sb.toString();
+    return couplage;
+}
+
+    public void allCouplages(){
+        System.out.println("\n---------\nCouplage Total de l'application : "+totalCouplage+"\n");
+        for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+            for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry2 : classMap.entrySet()) {
+                if (!entry.getKey().getName().toString().equals(entry2.getKey().getName().toString())) {
+                    System.out.println("Couplage entre " + entry.getKey().getName().toString() + " et " + entry2.getKey().getName().toString() + " : " + calcCouplage(entry.getKey().getName().toString(), entry2.getKey().getName().toString()));
+                }
+            }
+        }
     }
 
-    public String ResolveBinding(MethodInvocation mi){
-        String result = ""; //pour stocker le retour
-        ITypeBinding typeBinding; // our tester le type de l'expression au fur et à mesure
 
-        Expression exp = mi.getExpression(); // la partie avant le point
-
-        String calleeFullName = "";
-
-        typeBinding = exp.resolveTypeBinding();
-        if (typeBinding != null) {
-            calleeFullName = typeBinding.getQualifiedName() + "." + mi.getName().getFullyQualifiedName();
-        } else {
-            calleeFullName = mi.getName().getFullyQualifiedName();
+    public void printCoupling() {
+        System.out.println("\n---------\nCouplages : \n");
+        for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+            System.out.println(entry.getKey().resolveBinding().getQualifiedName() + " -> ");
+            for(Map.Entry<String, Integer> entry2 : entry.getValue().entrySet()) {
+                System.out.println("\t" + entry2.getKey() + " (" + entry2.getValue() + ")");
+            }
         }
-        return calleeFullName;
+    }
+
+    //using jgrapht to create the Weighted graph
+    public void createGraph(){
+        System.out.println("\n---------\nCreating Weighted Graph : \n");
+
+        String som1;
+        String som2;
+
+        //pour chaque classe on ajoute un sommet au graphe
+        for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+            graph.addVertex(entry.getKey().resolveBinding().getQualifiedName());
+        }
+
+        //une fois que tous les sommets sont ajoutés, on ajoute les arêtes
+        for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+            som1 = entry.getKey().resolveBinding().getQualifiedName();
+
+            for(Map.Entry<String, Integer> entry2 : entry.getValue().entrySet()) {
+                som2 = entry2.getKey();
+                DefaultWeightedEdge e;
+
+                //vérifier si on à pas déjà l'arête dans l'autre sens
+                if (!graph.containsEdge(som2, som1)) {
+                     e = graph.addEdge(som1, som2);
+                    graph.setEdgeWeight(e, entry2.getValue());
+                }
+                else {
+                    //sion l'a déjà on incrémente juste le poids de l'arête
+                    e = graph.getEdge(som2, som1);
+                    graph.setEdgeWeight(e,graph.getEdgeWeight(graph.getEdge(som2, som1)) + entry2.getValue());
+                }
+            }
+        }
     }
 
 
