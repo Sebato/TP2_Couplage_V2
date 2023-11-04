@@ -23,7 +23,7 @@ public class CallGraph {
     //chaque classe sera associée à une map qui contiendra
     // les classes qu'elle appelle et
     // le nombre d'appel à ces dernieres
-    private Map<TypeDeclaration,Map<String, Integer>> classMap = new HashMap<>();
+    private Map<String,Map<String, Integer>> classMap = new HashMap<>();
     private int totalCouplage = 0;
 
     public SimpleWeightedGraph<String, DefaultWeightedEdge> graph =
@@ -38,9 +38,15 @@ public class CallGraph {
     public int getTotalCouplage() {
         return totalCouplage;
     }
+    public void printAllClasses(){
+        System.out.println("\n---------\nClasses : \n");
+        for(Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
+            System.out.println(entry.getKey());
+        }
+    }
 
     //A chaque ajout de classe on crée une nouvelle map qui lui est associée
-    public void addClassKey(TypeDeclaration Ckey) {
+    public void addClassKey(String Ckey) {
         if (!classMap.containsKey(Ckey)) {
             classMap.put(Ckey, new HashMap<>());
         }
@@ -48,10 +54,7 @@ public class CallGraph {
     }
 
     //après initialisation des classes, on cherche les couplages entre elles
-    public void findCouplages(){
-        //pour chaque classe
-        for (TypeDeclaration c : this.classMap.keySet()){
-            //System.out.println("\n--------- Class : " + c.getName().getFullyQualifiedName());
+    public void findCouplages(TypeDeclaration c){
 
             //pour chaque methode de cette classe
             for (MethodDeclaration m : c.getMethods()){
@@ -63,8 +66,8 @@ public class CallGraph {
                 //pour toutes les methodes invoquées, on ajoute un couplage entre la classe courante et la classe invoquée
                 for (MethodInvocation mi : methodDeclarationVisitor.getMethodsCalled()){
 
-//                    System.out.println("\n--Method : " + m.getName().getFullyQualifiedName() +
-//                            " calls : " + mi.getName().getFullyQualifiedName());
+                    System.out.println("\n--Method : " + m.getName().getFullyQualifiedName() +
+                            " calls : " + mi.getName().getFullyQualifiedName());
 
                     if (mi.getExpression() != null) { // c'est null quand appel à this implicite par exemple
 
@@ -74,23 +77,30 @@ public class CallGraph {
                         // le resolveTypeBinding() retourne null (très embêtant oui)
 
                         if (mi.getExpression().resolveTypeBinding() != null) {
-                            //System.out.println(" from " + mi.getExpression().resolveTypeBinding().getName());
-                            addCouplage(c, mi.getExpression().resolveTypeBinding().getName());
+                            String tmp = mi.getExpression().resolveTypeBinding().getName();
+                            System.out.println(" from " + tmp);
+
+                            //Petite protection : si la classe invoquée n'est pas dans le projet on ne l'ajoute pas
+                            System.out.println("checking if " + tmp +
+                                    " is in the project : " + classMap.containsKey(tmp));
+                            if (classMap.containsKey(tmp)) {
+                                addCouplage(c.getName().getFullyQualifiedName(), mi.getExpression().resolveTypeBinding().getName());
+                            }
                         }
 //                        else System.err.println("resolveTypeBinding() returned null for " + mi.getExpression().toString());
                     }
                 }
             }
         }
-    }
+
 
     // ajoute un couplage entre la classe C et la classe C2
     // et incrémente le couplage total
-    private void addCouplage(TypeDeclaration c, String c2) {
+    private void addCouplage(String c, String c2) {
         //System.out.println("Adding coupling between " + c.getName() + " and " + c2);
 
         //on n'ajoute pas de couplage réflexif
-        if (!c2.equals(c.getName().toString())){
+        if (!c2.equals(c)){
 
             //si la classe C n'est pas deja dans la map on l'ajoute
             // (mais c'est bizarre si elle y est pas)
@@ -121,11 +131,11 @@ public class CallGraph {
         Map<String, Integer> c1Calls = new HashMap<>();
         Map<String, Integer> c2Calls = new HashMap<>();
 
-        for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+        for (Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
 
-            if (entry.getKey().getName().toString().equals(c1))
+            if (entry.getKey().equals(c1))
                 c1Calls = entry.getValue();
-            if (entry.getKey().getName().toString().equals(c2))
+            if (entry.getKey().equals(c2))
                 c2Calls = entry.getValue();
             if (!c1Calls.isEmpty() && !c2Calls.isEmpty())
                 break;
@@ -142,8 +152,9 @@ public class CallGraph {
             if (c2Calls.containsKey(c1)) {
                 couplage += c2Calls.get(c1);
             }
+            return  couplage / totalCouplage;
         }
-        return  couplage / totalCouplage;
+        return 0;
     }
 
     public void allCouplages(){
@@ -154,11 +165,11 @@ public class CallGraph {
         String s1;
         String s2;
 
-        for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
-            s1 = entry.getKey().getName().toString();
+        for (Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
+            s1 = entry.getKey();
 
-            for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry2 : classMap.entrySet()) {
-                s2 = entry2.getKey().getName().toString();
+            for (Map.Entry<String, Map<String, Integer>> entry2 : classMap.entrySet()) {
+                s2 = entry2.getKey();
 
                 if (!s1.equals(s2)){
                     if(!done.contains(new MutablePair<>(s1,s2)) && !done.contains(new MutablePair<>(s2,s1))) {
@@ -173,8 +184,8 @@ public class CallGraph {
     //pas utile si on affiche déja dans allCouplages()
     public void printCoupling() {
         System.out.println("\n---------\nCouplages : \n");
-        for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
-            System.out.println(entry.getKey().resolveBinding().getQualifiedName() + " -> ");
+        for(Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
+            System.out.println(entry.getKey() + " -> ");
             for(Map.Entry<String, Integer> entry2 : entry.getValue().entrySet()) {
                 System.out.println("\t" + entry2.getKey() + " (" + entry2.getValue() + ")");
             }
@@ -187,20 +198,20 @@ public class CallGraph {
         String som2;
 
         //pour chaque classe on ajoute un sommet au graphe
-        for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+        for(Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
 
             //ATTENTION POSSIBILITE D'ERREUR D'EXECUTION :
             // on ne prend que le nom de la classe et pas le package
             // sinon on ne peut pas éviter les doublons d'arêtes (A,B) et (B,A)
 
-            graph.addVertex(entry.getKey().resolveBinding().getQualifiedName().substring(entry.getKey().resolveBinding().getQualifiedName().lastIndexOf(".")+1));
+            graph.addVertex(entry.getKey().substring(entry.getKey().lastIndexOf(".")+1));
         }
         System.out.println("\n---------\nGraph vertices : \n" + graph.vertexSet());
         //une fois que tous les sommets sont ajoutés, on ajoute les arêtes
-        for(Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+        for(Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
 
             //get the last part of string (the class name) after the last dot
-            som1 = entry.getKey().resolveBinding().getQualifiedName().substring(entry.getKey().resolveBinding().getQualifiedName().lastIndexOf(".")+1);
+            som1 = entry.getKey().substring(entry.getKey().lastIndexOf(".")+1);
 
             for(Map.Entry<String, Integer> entry2 : entry.getValue().entrySet()) {
                 som2 = entry2.getKey();
@@ -255,4 +266,12 @@ public class CallGraph {
             e.printStackTrace();
         }
     }
+/*
+    private boolean isClassInProject(String tmp) {
+        for (Map.Entry<TypeDeclaration, Map<String, Integer>> entry : classMap.entrySet()) {
+            if (entry.getKey().resolveBinding().getQualifiedName().equals(tmp))
+                return true;
+        }
+        return false;
+    }*/
 }

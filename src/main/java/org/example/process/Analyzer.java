@@ -52,13 +52,17 @@ public class Analyzer {
     public void initCallGraph() throws IOException {
        // System.out.println("\n\tInitializing Call Graph ClassMap");
         for (TypeDeclaration type : visitor.getClasses()) {
-            cg.addClassKey(type);
+            cg.addClassKey(type.getName().getFullyQualifiedName());
         }
     }
 
     //find all the couplings between classes
     public void findCouplages() {
-        cg.findCouplages();
+        cg.printAllClasses();
+
+        for (TypeDeclaration type : visitor.getClasses()) {
+            cg.findCouplages(type);
+        }
     }
 
     //print the coupling between classes
@@ -82,7 +86,7 @@ public class Analyzer {
         initCallGraph();
         //at this point : all classes registered in the CG Map
 
-        cg.findCouplages();
+        findCouplages();
         //at this point : the values of the couplings between classes are in the CG Map
 
         //cg.printCoupling();
