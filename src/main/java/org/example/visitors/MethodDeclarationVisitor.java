@@ -22,8 +22,6 @@ public class MethodDeclarationVisitor extends ASTVisitor {
 		//toutes les invocations sont ajoutées à la liste des invocations de la methode
 		methodsCalled.addAll(invocationVisitor.getMethodInvocations());
 
-		//on pourrait déjà eliminer les invocations à des méthodes de notre propre classe ?
-
 		return super.visit(node);
 	}
 }
