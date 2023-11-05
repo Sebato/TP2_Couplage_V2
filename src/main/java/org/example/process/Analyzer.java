@@ -58,20 +58,14 @@ public class Analyzer {
 
     //find all the couplings between classes
     public void findCouplages() {
-        cg.printAllClasses();
-
         for (TypeDeclaration type : visitor.getClasses()) {
             cg.findCouplages(type);
         }
     }
 
     //print the coupling between classes
-    public void printCoupling() {
-        cg.printCoupling();
-    }
-
-    public void allCouplages() {
-        cg.allCouplages();
+    public void printCoupling(boolean displayAll) {
+        cg.allCouplages(displayAll);
     }
 
     //do it all in one go
@@ -88,12 +82,5 @@ public class Analyzer {
 
         findCouplages();
         //at this point : the values of the couplings between classes are in the CG Map
-
-        //cg.printCoupling();
-        //at this point : Couplings printed
-
-        cg.allCouplages();
-        //at this point : the couplings between classes have been displayed
-
     }
 }

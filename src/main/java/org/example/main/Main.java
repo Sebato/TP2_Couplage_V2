@@ -23,9 +23,18 @@ public class Main {
         }
 
         analyzer.processAll();
+        cg.allCouplages(false);
         cg.createGraph();
 
-        String outPath = System.getProperty("user.dir")+"/g.dot";
+        System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
+        String name = sc.nextLine();
+        String outPath;
+
+        if (name.isEmpty()) {
+            outPath = System.getProperty("user.dir")+"/Graphes/g.dot";
+        }else {
+            outPath = System.getProperty("user.dir") + "/Graphes/" + name + ".dot";
+        }
         cg.exportGraphToDot(outPath);
 
 
