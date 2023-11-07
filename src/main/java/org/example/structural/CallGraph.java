@@ -180,6 +180,14 @@ public class CallGraph {
         }
     }
 
+    public void printGraphe(SimpleWeightedGraph<String, DefaultWeightedEdge> g){
+        System.out.println("\n---------\nGraphe : \n");
+        System.out.println("sommets : "+g.vertexSet());
+        for (DefaultWeightedEdge e : g.edgeSet().stream().toList()){
+            System.out.println(g.getEdgeSource(e)+" -> "+g.getEdgeTarget(e)+" : "+g.getEdgeWeight(e));
+        }
+    }
+
     public void createGraph(){
 
         String som1;
@@ -257,27 +265,27 @@ public class CallGraph {
 
         //c'est un peu lourd mais c'est plus pratique à manipuler :
 
-        //on recupère toutes les classes dans le graphe pondéré
+        //on recupère toutes les classes/sommets dans le graphe pondéré
         for(String c : graph.vertexSet()){
             clusterGraph.addVertex(c);
         }
 
-        //on recupère toutes les arêtes dans le graphe pondéré
+        //on recupère toutes les arêtes (avec les poids!!) dans le graphe pondéré
         for (DefaultWeightedEdge e : graph.edgeSet().stream().toList()){
             clusterGraph.addEdge(graph.getEdgeSource(e), graph.getEdgeTarget(e));
+            clusterGraph.setEdgeWeight(clusterGraph.getEdge(graph.getEdgeSource(e), graph.getEdgeTarget(e)),
+                    graph.getEdgeWeight(e));
         }
 
-        System.out.println("\n----------\nCluster hierarchique en cours de génération : ");
-        System.out.println("\n\t"+clusterGraph.vertexSet());
+        printGraphe(clusterGraph);
 
         //tant qu'on peut regrouper
         while(clusterGraph.vertexSet().size()>1){
 
-            //wait for user input
+            //DEBUG : wait for user input
             Scanner sc = new Scanner(System.in);
             System.out.println("\n----------\nAppuyez sur entrée pour continuer");
             sc.nextLine();
-
             System.out.println("\n -- taille du cluster : "+clusterGraph.vertexSet().size());
             System.out.println(clusterGraph.vertexSet());
 
@@ -286,7 +294,8 @@ public class CallGraph {
             String nodeL = fuseNodes.getLeft();
             String nodeR = fuseNodes.getRight();
 
-            System.out.println("\n\t"+nodeL+" et "+nodeR);
+            System.out.println("\n"+nodeL+" et "+nodeR+" sont sur l'arête avec la plus forte pondération : "+
+                    clusterGraph.getEdgeWeight(clusterGraph.getEdge(nodeL,nodeR)));
 
             //on crée le nom du noeud qui représentera ce regroupement
             String newCluster = "("+nodeL+" , "+nodeR+")";
@@ -336,25 +345,46 @@ public class CallGraph {
     //modifie le cluster pour transférer les arêtes au nouveau cluster
     //et renvoie la liste des arêtes à supprimer
     private Collection<DefaultWeightedEdge> resolveNewEdges(String newCluster, String nodeL, String nodeR) {
+
+        System.out.println("--Résolution des arêtes : " + nodeL + " et " + nodeR);
+
         List<DefaultWeightedEdge> edgesToRemove = new ArrayList<>();
+
         for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
+            System.out.println("\n\t"+clusterGraph.getEdgeSource(e)+" -> "+clusterGraph.getEdgeTarget(e));
 
             //si source d'une arête = nodeL ou nodeR, on la remplace par newCluster
             if(clusterGraph.getEdgeSource(e).equals(nodeL) || clusterGraph.getEdgeSource(e).equals(nodeR)){
+                System.out.println("match1");
                 //si on a pas déjà une arête entre newCluster et le target de l'arête
                 if(!clusterGraph.containsEdge(newCluster, clusterGraph.getEdgeTarget(e))){
+
                     //on ajoute une arête entre newCluster et le target de l'arête
                     clusterGraph.addEdge(newCluster, clusterGraph.getEdgeTarget(e));
+                }
+                //sinon on incrémente le poids de l'arête
+                else{
+                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)),
+                            clusterGraph.getEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)))
+                                    + clusterGraph.getEdgeWeight(e));
                 }
                 edgesToRemove.add(e);
             }
 
             //sinon si target d'une arête = nodeL ou nodeR, on la remplace par newCluster
             else if(clusterGraph.getEdgeTarget(e).equals(nodeL) || clusterGraph.getEdgeTarget(e).equals(nodeR)){
+                System.out.println("match2");
                 //si on a pas déjà une arête entre newCluster et le source de l'arête
                 if(!clusterGraph.containsEdge(clusterGraph.getEdgeSource(e),newCluster)){
+
                     //on ajoute une arête entre newCluster et le source de l'arête
                     clusterGraph.addEdge(clusterGraph.getEdgeSource(e),newCluster);
+                }
+                //sinon on incrémente le poids de l'arête
+                else {
+                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e), newCluster),
+                            clusterGraph.getEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e), newCluster))
+                                    + clusterGraph.getEdgeWeight(e));
                 }
                 edgesToRemove.add(e);
             }
