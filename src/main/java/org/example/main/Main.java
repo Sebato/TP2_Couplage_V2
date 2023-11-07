@@ -26,18 +26,18 @@ public class Main {
         cg.allCouplages(false);
         cg.createGraph();
 
-        System.out.println("Cluster hierarchique généré : \n"+cg.clusturing());
-
-        System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
-        String name = sc.nextLine();
-        String outPath;
-
-        if (name.isEmpty()) {
-            outPath = System.getProperty("user.dir")+"/Graphes/g.dot";
-        }else {
-            outPath = System.getProperty("user.dir") + "/Graphes/" + name + ".dot";
-        }
-        cg.exportGraphToDot(outPath);
+        cg.clusturing();
+//
+//        System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
+//        String name = sc.nextLine();
+//        String outPath;
+//
+//        if (name.isEmpty()) {
+//            outPath = System.getProperty("user.dir")+"/Graphes/g.dot";
+//        }else {
+//            outPath = System.getProperty("user.dir") + "/Graphes/" + name + ".dot";
+//        }
+//        cg.exportGraphToDot(outPath);
 
 
     }

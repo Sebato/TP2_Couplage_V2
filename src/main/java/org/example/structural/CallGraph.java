@@ -253,58 +253,113 @@ public class CallGraph {
     }
     
     public String clusturing(){
-        List<String> clusters = new ArrayList<>(graph.vertexSet().stream().toList());
         String prettyPrint = "";
+
+        //c'est un peu lourd mais c'est plus pratique à manipuler :
+
         //on recupère toutes les classes dans le graphe pondéré
-        this.clusterGraph.vertexSet().addAll(graph.vertexSet());
+        for(String c : graph.vertexSet()){
+            clusterGraph.addVertex(c);
+        }
+
+        //on recupère toutes les arêtes dans le graphe pondéré
+        for (DefaultWeightedEdge e : graph.edgeSet().stream().toList()){
+            clusterGraph.addEdge(graph.getEdgeSource(e), graph.getEdgeTarget(e));
+        }
+
+        System.out.println("\n----------\nCluster hierarchique en cours de génération : ");
+        System.out.println("\n\t"+clusterGraph.vertexSet());
 
         //tant qu'on peut regrouper
         while(clusterGraph.vertexSet().size()>1){
+
+            //wait for user input
+            Scanner sc = new Scanner(System.in);
+            System.out.println("\n----------\nAppuyez sur entrée pour continuer");
+            sc.nextLine();
+
+            System.out.println("\n -- taille du cluster : "+clusterGraph.vertexSet().size());
+            System.out.println(clusterGraph.vertexSet());
 
             //on récupère les classes de l'arête avec la plus forte pondération
             Pair<String,String> fuseNodes = clusterProches();
             String nodeL = fuseNodes.getLeft();
             String nodeR = fuseNodes.getRight();
 
+            System.out.println("\n\t"+nodeL+" et "+nodeR);
+
             //on crée le nom du noeud qui représentera ce regroupement
             String newCluster = "("+nodeL+" , "+nodeR+")";
-            prettyPrint += "\n\t"+nodeL+"\n\t"+nodeR;
+            prettyPrint += "--\n\t"+nodeL+"\n\t"+nodeR+"\n";
+
+            System.out.println("\n\t"+prettyPrint+"\n");
 
             //on ajoute le nouveau noeud créé
             clusterGraph.addVertex(newCluster);
 
-            //et les aretes qui étaient liées aux précédentes deux classes:
-            clusterGraph.edgeSet().addAll(resolveNewEdges(newCluster, nodeL, nodeR));
+            //on change de source/target les aretes qui étaient liées aux précédentes deux classes
+            // et on recupère les arêtes à supprimer
+            ArrayList<DefaultWeightedEdge> rem = new ArrayList<>(resolveNewEdges(newCluster, nodeL, nodeR));
 
-            //on retire l'arête traitée
-            clusterGraph.removeEdge(nodeL,nodeR);
-            //et les noeuds qui lui sont associés
+            //on supprime les arêtes qui ne servent plus
+            for (DefaultWeightedEdge e : rem){
+                clusterGraph.removeEdge(e);
+            }
+
+            //et les noeuds qui y étaient associés
             clusterGraph.removeVertex(nodeR);
             clusterGraph.removeVertex(nodeL);
 
-
-            clusters.add(newCluster);
         }
-        return clusters.get(0);
+        System.out.println("\n----------\nCluster hierarchique généré : \n"+prettyPrint);
+        return clusterGraph.vertexSet().stream().findFirst().get();
     }
 
     private Pair<String,String > clusterProches() {
         double maxPond = 0;
         double eWeight = 0;
         String c1 = null, c2 = null;
-        for (DefaultWeightedEdge e : graph.edgeSet().stream().toList()){
-            eWeight = graph.getEdgeWeight(e);
+
+        //on récupère les classes de l'arête avec la plus forte pondération
+        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
+            eWeight = clusterGraph.getEdgeWeight(e);
             if( eWeight > maxPond) {
                 maxPond = eWeight;
-                c1 = graph.getEdgeSource(e);
-                c2 = graph.getEdgeTarget(e);
+                c1 = clusterGraph.getEdgeSource(e);
+                c2 = clusterGraph.getEdgeTarget(e);
                 break;
             }
         }
         return new ImmutablePair<String,String>(c1,c2);
     }
 
-    //retourne la liste des nouvelles arêtes à ajouter au cluster modifié
-    private Collection<? extends DefaultWeightedEdge> resolveNewEdges(String newCluster, String nodeL, String nodeR) {
+    //modifie le cluster pour transférer les arêtes au nouveau cluster
+    //et renvoie la liste des arêtes à supprimer
+    private Collection<DefaultWeightedEdge> resolveNewEdges(String newCluster, String nodeL, String nodeR) {
+        List<DefaultWeightedEdge> edgesToRemove = new ArrayList<>();
+        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
+
+            //si source d'une arête = nodeL ou nodeR, on la remplace par newCluster
+            if(clusterGraph.getEdgeSource(e).equals(nodeL) || clusterGraph.getEdgeSource(e).equals(nodeR)){
+                //si on a pas déjà une arête entre newCluster et le target de l'arête
+                if(!clusterGraph.containsEdge(newCluster, clusterGraph.getEdgeTarget(e))){
+                    //on ajoute une arête entre newCluster et le target de l'arête
+                    clusterGraph.addEdge(newCluster, clusterGraph.getEdgeTarget(e));
+                }
+                edgesToRemove.add(e);
+            }
+
+            //sinon si target d'une arête = nodeL ou nodeR, on la remplace par newCluster
+            else if(clusterGraph.getEdgeTarget(e).equals(nodeL) || clusterGraph.getEdgeTarget(e).equals(nodeR)){
+                //si on a pas déjà une arête entre newCluster et le source de l'arête
+                if(!clusterGraph.containsEdge(clusterGraph.getEdgeSource(e),newCluster)){
+                    //on ajoute une arête entre newCluster et le source de l'arête
+                    clusterGraph.addEdge(clusterGraph.getEdgeSource(e),newCluster);
+                }
+                edgesToRemove.add(e);
+            }
+        }
+        //comme on itère sur la collection des arêtes, mieux vaut ne peut pas les supprimer directement
+        return edgesToRemove;
     }
 }
