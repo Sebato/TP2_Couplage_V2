@@ -26,6 +26,8 @@ public class Main {
         cg.allCouplages(false);
         cg.createGraph();
 
+        System.out.println("Cluster hierarchique généré : \n"+cg.clusturing());
+
         System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
         String name = sc.nextLine();
         String outPath;

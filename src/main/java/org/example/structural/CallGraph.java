@@ -30,6 +30,9 @@ public class CallGraph {
     public SimpleWeightedGraph<String, DefaultWeightedEdge> graph =
             new SimpleWeightedGraph<String, DefaultWeightedEdge>
                     (DefaultWeightedEdge.class);
+    public SimpleWeightedGraph<String, DefaultWeightedEdge> clusterGraph =
+            new SimpleWeightedGraph<String, DefaultWeightedEdge>
+                    (DefaultWeightedEdge.class);
 
     public CallGraph() {
         classMap = new HashMap<>();
@@ -247,5 +250,61 @@ public class CallGraph {
         } catch (ExportException | IOException e) {
             e.printStackTrace();
         }
+    }
+    
+    public String clusturing(){
+        List<String> clusters = new ArrayList<>(graph.vertexSet().stream().toList());
+        String prettyPrint = "";
+        //on recupère toutes les classes dans le graphe pondéré
+        this.clusterGraph.vertexSet().addAll(graph.vertexSet());
+
+        //tant qu'on peut regrouper
+        while(clusterGraph.vertexSet().size()>1){
+
+            //on récupère les classes de l'arête avec la plus forte pondération
+            Pair<String,String> fuseNodes = clusterProches();
+            String nodeL = fuseNodes.getLeft();
+            String nodeR = fuseNodes.getRight();
+
+            //on crée le nom du noeud qui représentera ce regroupement
+            String newCluster = "("+nodeL+" , "+nodeR+")";
+            prettyPrint += "\n\t"+nodeL+"\n\t"+nodeR;
+
+            //on ajoute le nouveau noeud créé
+            clusterGraph.addVertex(newCluster);
+
+            //et les aretes qui étaient liées aux précédentes deux classes:
+            clusterGraph.edgeSet().addAll(resolveNewEdges(newCluster, nodeL, nodeR));
+
+            //on retire l'arête traitée
+            clusterGraph.removeEdge(nodeL,nodeR);
+            //et les noeuds qui lui sont associés
+            clusterGraph.removeVertex(nodeR);
+            clusterGraph.removeVertex(nodeL);
+
+
+            clusters.add(newCluster);
+        }
+        return clusters.get(0);
+    }
+
+    private Pair<String,String > clusterProches() {
+        double maxPond = 0;
+        double eWeight = 0;
+        String c1 = null, c2 = null;
+        for (DefaultWeightedEdge e : graph.edgeSet().stream().toList()){
+            eWeight = graph.getEdgeWeight(e);
+            if( eWeight > maxPond) {
+                maxPond = eWeight;
+                c1 = graph.getEdgeSource(e);
+                c2 = graph.getEdgeTarget(e);
+                break;
+            }
+        }
+        return new ImmutablePair<String,String>(c1,c2);
+    }
+
+    //retourne la liste des nouvelles arêtes à ajouter au cluster modifié
+    private Collection<? extends DefaultWeightedEdge> resolveNewEdges(String newCluster, String nodeL, String nodeR) {
     }
 }
