@@ -15,8 +15,7 @@ import java.util.Objects;
 public class ProjectHandler {
 
     private ArrayList<File> javaFiles;
-//    public static String projectSourcePath =  "/home/e20170009949/IdeaProjects/SimpleTestProject/src";
-    public static String projectSourcePath =  "/home/seb/IdeaProjects/TestJavaProject/src";
+    public static String projectSourcePath =  System.getProperty("user.dir")+"/src";
 
     ProjectHandler(){
         javaFiles = new ArrayList<>();

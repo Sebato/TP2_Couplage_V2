@@ -50,6 +50,9 @@ public class Main {
         //   - créer un fichier .dot à partir du graphe à l'emplacement spécifié
         cg.exportGraphToDot(outPath);
 
+        System.out.println("\n----------\nappuyez sur entrée pour passer au clustering");
+        sc.nextLine();
+
         //clustering() va :
         //   - créer un cluster hierarchique à partir du graphe
         cg.clustering();

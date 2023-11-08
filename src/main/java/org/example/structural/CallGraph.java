@@ -290,9 +290,12 @@ public class CallGraph {
         //bon... la méthode est un peu lourde mais c'est plus pratique à manipuler,
         // à voir si les gros projets tiennent le coup:
 
+        List<String> notDoneYet = new ArrayList<>();
+
         //on recupère toutes les classes/sommets du graphe pondéré
         for(String c : weightedGraph.vertexSet()){
             clusterGraph.addVertex(c);
+            notDoneYet.add(c);
         }
 
         //on recupère toutes les arêtes (avec les poids!!) du graphe pondéré
@@ -302,77 +305,119 @@ public class CallGraph {
                     weightedGraph.getEdgeWeight(e));
         }
 
+        //on initialise la variable de boucle qui va nous permettre de sortir de la boucle prématurément si besoin
+        boolean stop = false;
+
         //tant qu'on peut regrouper des clusters
-        while(clusterGraph.vertexSet().size()>1) {
+        while(clusterGraph.vertexSet().size()>1 && !stop) {
 
 //            //DEBUG : wait for user input
 //            Scanner sc = new Scanner(System.in);
 //            System.out.println("\n----------\nAppuyez sur entrée pour continuer");
 //            sc.nextLine();
 //            System.out.println("\n -- taille du cluster : "+clusterGraph.vertexSet().size());
-//            System.out.println(clusterGraph.vertexSet());
 
             //on récupère les classes de l'arête avec la plus forte pondération
             Pair<String, String> fuseNodes = clusterProches();
-            String nodeL = fuseNodes.getLeft();
-            String nodeR = fuseNodes.getRight();
 
-            //on crée le nom du noeud qui représentera ce regroupement
-            String newCluster = "(" + nodeL + " , " + nodeR + ")";
+            //si il n'y a plus d'arêtes on sort de la boucle
+            if (fuseNodes == null) {
+                System.out.println("######## plus d'arêtes à fusionner, fin du clustering ########");
+                stop = true;
 
-            //on l'ajoute au graphe
-            clusterGraph.addVertex(newCluster);
-
-            //on change de source/target les aretes qui étaient liées aux précédentes deux classes
-            // et on recupère les arêtes à supprimer
-            ArrayList<DefaultWeightedEdge> rem = new ArrayList<>(resolveNewEdges(newCluster, nodeL, nodeR));
-
-            //on supprime les arêtes qui ne servent plus
-            for (DefaultWeightedEdge e : rem){
-                clusterGraph.removeEdge(e);
-            }
-
-            //et les noeuds qui leur étaient associés
-            clusterGraph.removeVertex(nodeR);
-            clusterGraph.removeVertex(nodeL);
-
-
-            //partie affichage dans CLI
-            if (ppList.isEmpty()){
-                ppList.add(new PreetyPrinter(newCluster, nodeL, nodeR));
-            }else{
-                PreetyPrinter ppToRem = null;
-                PreetyPrinter newPP = null;
-
-                //si nodeL ou nodeR identifie un des pp dans la liste
-                for (PreetyPrinter pp : ppList){
-                    if (pp.cluster.equals(nodeL)){
-                        newPP = new PreetyPrinter(newCluster, pp, nodeR);
-                        ppToRem = pp;
-                        break;
-                    }
-                    else if (pp.cluster.equals(nodeR)){
-                        newPP = new PreetyPrinter(newCluster, nodeL, pp);
-                        ppToRem = pp;
-                        break;
-                    }
-                    else {
-                        //sinon cluster indépendant
-                        newPP = new PreetyPrinter(newCluster, nodeL, nodeR);
-                    }
+                //ajouter tous les sommets restants dans la liste des clusters
+                for (String s : notDoneYet){
+                    ppList.add(new PreetyPrinter(s));
                 }
 
-                //on ajoute le nouveau pp
-                ppList.add(newPP);
+                //sinon le clustering continue
+            }else {
 
-                //on supprime le pp qui a été fusionné
-                if (ppToRem != null){
-                    ppList.remove(ppToRem);
+                String nodeL = fuseNodes.getLeft();
+                String nodeR = fuseNodes.getRight();
+
+                //on crée le nom du noeud qui représentera ce regroupement
+                String newCluster = "(" + nodeL + " , " + nodeR + ")";
+
+                //on l'ajoute au graphe
+                clusterGraph.addVertex(newCluster);
+
+                //on change de source/target les aretes qui étaient liées aux précédentes deux classes
+                // et on recupère les arêtes à supprimer
+                ArrayList<DefaultWeightedEdge> rem = new ArrayList<>(resolveNewEdges(newCluster, nodeL, nodeR));
+
+                //on supprime les arêtes qui ne servent plus
+                for (DefaultWeightedEdge e : rem){
+                    clusterGraph.removeEdge(e);
+                }
+
+                //et les noeuds qui leur étaient associés
+                clusterGraph.removeVertex(nodeR);
+                clusterGraph.removeVertex(nodeL);
+
+                //on retire aussi les deux classes de la liste des classes à traiter
+                notDoneYet.remove(nodeL);
+                notDoneYet.remove(nodeR);
+
+
+                //partie affichage dans CLI
+                if (ppList.isEmpty()){
+                    ppList.add(new PreetyPrinter(newCluster, nodeL, nodeR));
+
+                }else{
+
+                    List<PreetyPrinter> ppToRem = new ArrayList<>();
+                    PreetyPrinter newPP1 = null;
+                    PreetyPrinter newPP2 = null;
+
+                    //si nodeL ou nodelR identifie un des pp dans la liste
+                    for (PreetyPrinter pp : ppList){
+
+                        if (pp.cluster.equals(nodeL)){
+                            newPP1 = new PreetyPrinter(newCluster, pp, nodeR);
+                            ppToRem.add(pp);
+                        }else if (pp.cluster.equals(nodeR)){
+                            newPP2 = new PreetyPrinter(newCluster, nodeL, pp);
+                            ppToRem.add(pp);
+                        }
+                    }
+
+                    //si on a eu deux correspondances : on fusionne les deux pp
+                    if (newPP1 != null && newPP2 != null){
+                        PreetyPrinter newPP = new PreetyPrinter(newCluster,newPP1.nodeL, newPP2.nodeR );
+                        ppList.add(newPP);
+                    }
+                    //cas si aucune correspondance
+                    else if (newPP1 == null && newPP2 == null){
+                        ppList.add(new PreetyPrinter(newCluster, nodeL, nodeR));
+                    }
+                    //Cas si correspondance avec seulement nodeL
+                    else if (newPP2 == null){
+                        ppList.add(newPP1);
+                    }
+                    //Cas si correspondance avec seulement nodeR
+                    else {
+                        ppList.add(newPP2);
+                    }
+
+                    //on supprime les pp qui ont été fusionnés
+                    for (PreetyPrinter pp : ppToRem) {
+                        ppList.remove(pp);
+                    }
                 }
             }
         }
-        //on affiche le dernier cluster de la liste (le plus haut dans la hierarchie normalement
-        System.out.println("\n----------\nCluster hierarchique : \n"+ppList.getLast());
+
+        //si on est sortis de la boucle prématurément
+        if (stop){
+            System.out.println("\n----------\nClusters hierarchiques générés : \n");
+            for (PreetyPrinter pp : ppList){
+                System.out.println(pp+"\n");
+            }
+        }else {
+            //on affiche le dernier cluster de la liste (le plus haut dans la hierarchie normalement
+            System.out.println("\n----------\nCluster hierarchique : \n" + ppList.getLast());
+        }
     }
 
     //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération
@@ -380,6 +425,9 @@ public class CallGraph {
         double maxPond = 0;
         double eWeight;
         String c1 = null, c2 = null;
+
+        //si il n'y a plus d'arêtes on renvoie null
+        if (clusterGraph.edgeSet().isEmpty()) return null;
 
         //on récupère les classes de l'arête avec la plus forte pondération
         for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){

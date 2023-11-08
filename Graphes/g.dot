@@ -1,13 +1,19 @@
 strict graph G {
-  CClass;
-  BVisitor;
-  BClass;
-  AClass;
+  CallGraph;
+  MethodInvocationVisitor;
+  PreetyPrinter;
+  ClassDeclarationVisitor;
+  Analyzer;
+  ProjectHandler;
+  MethodDeclarationVisitor;
+  CallGraphBackup;
   Main;
-  CClass -- BClass [ weight="0.08333333333333333" label="0,08" ];
-  CClass -- AClass [ weight="0.08333333333333333" label="0,08" ];
-  BVisitor -- BClass [ weight="0.16666666666666666" label="0,17" ];
-  AClass -- BClass [ weight="0.08333333333333333" label="0,08" ];
-  Main -- CClass [ weight="0.16666666666666666" label="0,17" ];
-  Main -- AClass [ weight="0.4166666666666667" label="0,42" ];
+  CallGraph -- MethodDeclarationVisitor [ weight="0.06666666666666667" label="0,07" ];
+  Analyzer -- CallGraph [ weight="0.26666666666666666" label="0,27" ];
+  Analyzer -- ProjectHandler [ weight="0.06666666666666667" label="0,07" ];
+  Analyzer -- ClassDeclarationVisitor [ weight="0.2" label="0,2" ];
+  MethodDeclarationVisitor -- MethodInvocationVisitor [ weight="0.06666666666666667" label="0,07" ];
+  CallGraphBackup -- MethodDeclarationVisitor [ weight="0.06666666666666667" label="0,07" ];
+  Main -- CallGraph [ weight="0.2" label="0,2" ];
+  Main -- Analyzer [ weight="0.06666666666666667" label="0,07" ];
 }
