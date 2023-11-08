@@ -10,20 +10,21 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 
 public class ProjectHandler {
 
     private ArrayList<File> javaFiles;
-    public static String projectSourcePath =  "/home/e20170009949/IdeaProjects/SimpleTestProject/src";
-//    public static String projectSourcePath =  "/home/seb/IdeaProjects/TestJavaProject/src";
+//    public static String projectSourcePath =  "/home/e20170009949/IdeaProjects/SimpleTestProject/src";
+    public static String projectSourcePath =  "/home/seb/IdeaProjects/TestJavaProject/src";
 
     ProjectHandler(){
-        javaFiles = new ArrayList<File>();
+        javaFiles = new ArrayList<>();
         initProjectStructure();
     }
 
     ProjectHandler(String path){
-        javaFiles = new ArrayList<File>();
+        javaFiles = new ArrayList<>();
         projectSourcePath = path;
         initProjectStructure();
     }
@@ -46,9 +47,9 @@ public class ProjectHandler {
     }
 
     private ArrayList<File> listJavaFilesInFolder(File folder) {
-        ArrayList<File> JF = new ArrayList<File>();
+        ArrayList<File> JF = new ArrayList<>();
 
-        for (File fileEntry : folder.listFiles()) {
+        for (File fileEntry : Objects.requireNonNull(folder.listFiles())) {
             if (fileEntry.isDirectory()) {
                 JF.addAll(listJavaFilesInFolder(fileEntry));
             } else if (fileEntry.getName().contains(".java")) {

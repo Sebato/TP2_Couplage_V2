@@ -82,5 +82,11 @@ public class Analyzer {
 
         findCouplages();
         //at this point : the values of the couplings between classes are in the CG Map
+
+
+        //afficher des infos maybe ?
+        System.out.println("\nnombre de classes : " + visitor.getClasses().size());
+        System.out.println("nombre de couplages : " + cg.getTotalCouplage());
+
     }
 }

@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MethodDeclarationVisitor extends ASTVisitor {
-	private List<MethodInvocation> methodsCalled = new ArrayList<>();
+	private final List<MethodInvocation> methodsCalled = new ArrayList<>();
 
 	public List<MethodInvocation> getMethodsCalled() {
 		return methodsCalled;

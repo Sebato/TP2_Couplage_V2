@@ -4,9 +4,10 @@ strict graph G {
   BClass;
   AClass;
   Main;
-  CClass -- BClass [ weight="0.125" label="0,12" ];
-  CClass -- AClass [ weight="0.125" label="0,12" ];
-  BVisitor -- BClass [ weight="0.25" label="0,25" ];
-  Main -- CClass [ weight="0.25" label="0,25" ];
-  Main -- AClass [ weight="0.25" label="0,25" ];
+  CClass -- BClass [ weight="0.08333333333333333" label="0,08" ];
+  CClass -- AClass [ weight="0.08333333333333333" label="0,08" ];
+  BVisitor -- BClass [ weight="0.16666666666666666" label="0,17" ];
+  AClass -- BClass [ weight="0.08333333333333333" label="0,08" ];
+  Main -- CClass [ weight="0.16666666666666666" label="0,17" ];
+  Main -- AClass [ weight="0.4166666666666667" label="0,42" ];
 }

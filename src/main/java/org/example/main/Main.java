@@ -22,23 +22,37 @@ public class Main {
             analyzer = new Analyzer(cg,path);
         }
 
+        //processAll() va :
+        //   - chercher tous les fichiers .java du projet, les parser et
+        //   les stocker
+        //   - initialiser une Map contenant tous les couplages entre les classes
+        //   pour pouvoir créer le Graphe d'appel par la suite
         analyzer.processAll();
-        cg.allCouplages(false);
+
+        //afficher tous les couplages trouvés
+        //cg.allCouplages(false);
+
+        //createGraph() va :
+        // créer le graphe à partir de la Map de couplages
         cg.createGraph();
 
-        cg.clusturing();
-//
-//        System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
-//        String name = sc.nextLine();
-//        String outPath;
-//
-//        if (name.isEmpty()) {
-//            outPath = System.getProperty("user.dir")+"/Graphes/g.dot";
-//        }else {
-//            outPath = System.getProperty("user.dir") + "/Graphes/" + name + ".dot";
-//        }
-//        cg.exportGraphToDot(outPath);
 
+        System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
+        String name = sc.nextLine();
+        String outPath;
+
+        if (name.isEmpty()) {
+            outPath = System.getProperty("user.dir")+"/Graphes/g.dot";
+        }else {
+            outPath = System.getProperty("user.dir") + "/Graphes/" + name + ".dot";
+        }
+        //exportGraphToDot() va :
+        //   - créer un fichier .dot à partir du graphe à l'emplacement spécifié
+        cg.exportGraphToDot(outPath);
+
+        //clustering() va :
+        //   - créer un cluster hierarchique à partir du graphe
+        cg.clustering();
 
     }
 }
