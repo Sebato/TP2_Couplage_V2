@@ -1,7 +1,6 @@
 package org.example.structural;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.*;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -17,6 +16,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.*;
+
+import static org.example.structural.ClusterStruct.ComparatorCouplage;
 
 public class CallGraph {
 
@@ -37,7 +38,7 @@ public class CallGraph {
                     (DefaultWeightedEdge.class);
 
     //pour l'affichage du cluster hierarchique
-    public ArrayList<PreetyPrinter>ppList = new ArrayList<>();
+    public ArrayList<ClusterStruct> clusterList = new ArrayList<>();
 
     public CallGraph() {
         classMap = new HashMap<>();
@@ -298,6 +299,8 @@ public class CallGraph {
             notDoneYet.add(c);
         }
 
+        System.out.println(clusterGraph.vertexSet());
+
         //on recupère toutes les arêtes (avec les poids!!) du graphe pondéré
         for (DefaultWeightedEdge e : weightedGraph.edgeSet().stream().toList()){
             clusterGraph.addEdge(weightedGraph.getEdgeSource(e), weightedGraph.getEdgeTarget(e));
@@ -318,160 +321,157 @@ public class CallGraph {
 //            System.out.println("\n -- taille du cluster : "+clusterGraph.vertexSet().size());
 
             //on récupère les classes de l'arête avec la plus forte pondération
-            Pair<String, String> fuseNodes = clusterProches();
+            Triple<String, String, Double> fuseNodes = clusterProches();
 
-            //si il n'y a plus d'arêtes on sort de la boucle
+            String nodeL;
+            String nodeR;
+            Double nodeCoup;
+
+            //si il n'y a plus d'arêtes
             if (fuseNodes == null) {
-                System.out.println("######## plus d'arêtes à fusionner, fin du clustering ########");
-                stop = true;
+                System.out.println("######## plus d'arêtes à fusionner ########\n" +
+                        "les clusters non encore reliés seront ajoutés par ordre de couplage intérieur \n" +
+                        "les classes restantes le seront par la suite dans leur ordre d'arrivée.");
 
+                //on ajoute les classes restantes à clusterList
                 //ajouter tous les sommets restants dans la liste des clusters
                 for (String s : notDoneYet){
-                    ppList.add(new PreetyPrinter(s));
+                    clusterList.add(new ClusterStruct(s));
                 }
 
-                //sinon le clustering continue
+                //trie les clusters dans l'ordre décroissant
+                clusterList.sort(ComparatorCouplage);
+                Collections.reverse(clusterList);
+
+                System.out.println(clusterList);
+                System.out.println("clusters triés : ");
+                for (ClusterStruct c : clusterList){
+                    System.out.println(c.cluster + " : " + c.couplageInterne);
+                }
+
+                //on va dire de fusionner les deux premiers éléments de la ClusterList
+                nodeL = clusterList.get(0).cluster;
+                nodeR = clusterList.get(1).cluster;
+                nodeCoup = 0.0;
+
+                //hoping it works
             }else {
 
-                String nodeL = fuseNodes.getLeft();
-                String nodeR = fuseNodes.getRight();
+                nodeL = fuseNodes.getLeft();
+                nodeR = fuseNodes.getMiddle();
+                nodeCoup = fuseNodes.getRight();
+            }
 
-                //on crée le nom du noeud qui représentera ce regroupement
-                String newCluster = "(" + nodeL + " , " + nodeR + ")";
+            //on crée le nom du noeud qui représentera ce regroupement
+            String newCluster = "(" + nodeL + " , " + nodeR + ")";
 
-                //on l'ajoute au graphe
-                clusterGraph.addVertex(newCluster);
+            //on l'ajoute au graphe
+            clusterGraph.addVertex(newCluster);
 
-                //on change de source/target les aretes qui étaient liées aux précédentes deux classes
-                // et on recupère les arêtes à supprimer
-                ArrayList<DefaultWeightedEdge> rem = new ArrayList<>(resolveNewEdges(newCluster, nodeL, nodeR));
+            //on change de source/target les aretes qui étaient liées aux précédentes deux classes
+            // et on recupère les arêtes à supprimer
+            ArrayList<DefaultWeightedEdge> rem = new ArrayList<>(resolveNewEdges(newCluster, nodeL, nodeR));
 
-                //on supprime les arêtes qui ne servent plus
-                for (DefaultWeightedEdge e : rem){
-                    clusterGraph.removeEdge(e);
+            //on supprime les arêtes qui ne servent plus
+            for (DefaultWeightedEdge e : rem){
+                clusterGraph.removeEdge(e);
+            }
+
+            //et les noeuds qui leur étaient associés
+            clusterGraph.removeVertex(nodeR);
+            clusterGraph.removeVertex(nodeL);
+
+            //on retire aussi les deux classes de la liste des classes à traiter
+            notDoneYet.remove(nodeL);
+            notDoneYet.remove(nodeR);
+
+
+            //partie structurelle du cluster
+            if (clusterList.isEmpty()){
+                clusterList.add(new ClusterStruct(newCluster, nodeL, nodeR, nodeCoup ));
+
+            }else{
+
+                List<ClusterStruct> ClusToRem = new ArrayList<>();
+                ClusterStruct newClust1 = null;
+                ClusterStruct newClust2 = null;
+
+                //si nodeL ou nodelR identifie un des cluster dans la liste
+                for (ClusterStruct cl : clusterList){
+
+                    if (cl.cluster.equals(nodeL)){
+                        newClust1 = new ClusterStruct(newCluster, cl, nodeR, nodeCoup);
+                        ClusToRem.add(cl);
+                    }else if (cl.cluster.equals(nodeR)){
+                        newClust2 = new ClusterStruct(newCluster, nodeL, cl, nodeCoup);
+                        ClusToRem.add(cl);
+                    }
                 }
 
-                //et les noeuds qui leur étaient associés
-                clusterGraph.removeVertex(nodeR);
-                clusterGraph.removeVertex(nodeL);
+                //si on a eu deux correspondances : on fusionne les deux pp
+                if (newClust1 != null && newClust2 != null){
+                    ClusterStruct newClust = new ClusterStruct(newCluster,newClust1.nodeL, newClust2.nodeR, nodeCoup );
+                    clusterList.add(newClust);
+                }
+                //cas si aucune correspondance
+                else if (newClust1 == null && newClust2 == null){
+                    clusterList.add(new ClusterStruct(newCluster, nodeL, nodeR, nodeCoup));
+                }
+                //Cas si correspondance avec seulement nodeL
+                else if (newClust2 == null){
+                    clusterList.add(newClust1);
+                }
+                //Cas si correspondance avec seulement nodeR
+                else {
+                    clusterList.add(newClust2);
+                }
 
-                //on retire aussi les deux classes de la liste des classes à traiter
-                notDoneYet.remove(nodeL);
-                notDoneYet.remove(nodeR);
-
-
-                //partie affichage dans CLI
-                if (ppList.isEmpty()){
-                    ppList.add(new PreetyPrinter(newCluster, nodeL, nodeR));
-
-                }else{
-
-                    List<PreetyPrinter> ppToRem = new ArrayList<>();
-                    PreetyPrinter newPP1 = null;
-                    PreetyPrinter newPP2 = null;
-
-                    //si nodeL ou nodelR identifie un des pp dans la liste
-                    for (PreetyPrinter pp : ppList){
-
-                        if (pp.cluster.equals(nodeL)){
-                            newPP1 = new PreetyPrinter(newCluster, pp, nodeR);
-                            ppToRem.add(pp);
-                        }else if (pp.cluster.equals(nodeR)){
-                            newPP2 = new PreetyPrinter(newCluster, nodeL, pp);
-                            ppToRem.add(pp);
-                        }
-                    }
-
-                    //si on a eu deux correspondances : on fusionne les deux pp
-                    if (newPP1 != null && newPP2 != null){
-                        PreetyPrinter newPP = new PreetyPrinter(newCluster,newPP1.nodeL, newPP2.nodeR );
-                        ppList.add(newPP);
-                    }
-                    //cas si aucune correspondance
-                    else if (newPP1 == null && newPP2 == null){
-                        ppList.add(new PreetyPrinter(newCluster, nodeL, nodeR));
-                    }
-                    //Cas si correspondance avec seulement nodeL
-                    else if (newPP2 == null){
-                        ppList.add(newPP1);
-                    }
-                    //Cas si correspondance avec seulement nodeR
-                    else {
-                        ppList.add(newPP2);
-                    }
-
-                    //on supprime les pp qui ont été fusionnés
-                    for (PreetyPrinter pp : ppToRem) {
-                        ppList.remove(pp);
-                    }
+                //on supprime les clusters qui ont été fusionnés
+                for (ClusterStruct cluster : ClusToRem) {
+                    clusterList.remove(cluster);
                 }
             }
         }
 
-        //si on est sortis de la boucle prématurément
-        if (stop){
-            System.out.println("\n----------\nClusters hierarchiques générés : \n");
-            for (PreetyPrinter pp : ppList){
-                System.out.println(pp+"\n");
-            }
-        }else {
-            //on affiche le dernier cluster de la liste (le plus haut dans la hierarchie normalement
-            System.out.println("\n----------\nCluster hierarchique : \n" + ppList.getLast());
-        }
+        //on affiche le dernier cluster restant de la liste (le plus haut dans la hierarchie normalement
+        System.out.println("\n----------\nCluster hierarchique : \n" + clusterList.get(0));
+
     }
 
     //Méthode d’indentification des groupes de  classes  couplées
     // (services / composants / modules / fonctionnalités)
     // à partir du cluster hierarchique
-//    public void moduleIdentifier(double moy) {
-//
-//            //si le cluster hierarchique est vide on ne peut pas identifier les modules
-//            if (ppList.isEmpty()) {
-//                System.err.println("Le cluster hierarchique est vide, impossible d'identifier les modules");
-//                return;
-//            }
-//
-//            //on initialise la variable de boucle qui va nous permettre de sortir de la boucle prématurément si besoin
-//            boolean stop = false;
-//
-//            //tant qu'on peut regrouper des clusters
-//            while(ppList.size()>1 && !stop) {
-//
-//                //on récupère les deux derniers clusters de la liste
-//                PreetyPrinter pp1 = ppList.get(ppList.size()-1);
-//                PreetyPrinter pp2 = ppList.get(ppList.size()-2);
-//
-//                //on récupère les deux classes de chaque cluster
-//                String c1 = pp1.cluster;
-//                String c2 = pp2.cluster;
-//
-//                //on récupère le couplage entre ces deux classes
-//                double couplage = getCouplage(c1, c2);
-//
-//                //si le couplage est supérieur à la moyenne on fusionne les deux clusters
-//                if (couplage > moy){
-//
-//                    //on crée le nom du noeud qui représentera ce regroupement
-//                    String newCluster = "(" + c1 + " , " + c2 + ")";
-//
-//                    //on crée le nouveau cluster
-//                    PreetyPrinter newPP = new PreetyPrinter(newCluster, pp1, pp2);
-//
-//                    //on l'ajoute à la liste
-//                    ppList.add(newPP);
-//
-//                    //on supprime les deux clusters qui ont été fusionnés
-//                    ppList.remove(pp1);
-//                    ppList.remove(pp2);
-//
-//                    //partie affichage dans CLI
-//                    System.out.println("\n");
-//    }
+
+    // - Une application doit être composée au plus de M/2 modules
+    //      (M est le nombre de classes dans l’application).
+
+    // - Chaque module doit contenir uniquement les classes d’une seule branche
+    //      du dendrogramme.
+
+    // - La moyenne du couplage de tous les couples de classes du module
+    //      doit être supérieure à CP (CP est un paramètre).
+
+    public void moduleIdentifier(double CP) {
+
+        // on va considérer qu'un cluster constitué d'une seule classe n'est pas compté parmi les modules possibles.
+        // on parcourt tous les clusters et on regarde la moyenne de couplage de chacun,
+        // si on en trouve qui ont une moyenne inférieure à CP
 
 
 
-    //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération
-    private Pair<String,String > clusterProches() {
+
+
+        //si le cluster hierarchique est vide on ne peut pas identifier les modules
+        if (clusterList.isEmpty()) {
+            System.err.println("Le cluster hierarchique est vide, impossible d'identifier les modules");
+            return;
+        }
+    }
+
+
+
+    //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération et cette valeur
+    private Triple<String,String,Double> clusterProches() {
         double maxPond = 0;
         double eWeight;
         String c1 = null, c2 = null;
@@ -492,7 +492,7 @@ public class CallGraph {
                 c2 = clusterGraph.getEdgeTarget(e);
             }
         }
-        return new ImmutablePair<>(c1, c2);
+        return new ImmutableTriple<>(c1, c2, maxPond);
     }
 
     //modifie le clusterGraph pour transférer les arêtes au nouveau cluster fusionné
