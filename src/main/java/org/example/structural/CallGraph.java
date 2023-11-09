@@ -420,6 +420,12 @@ public class CallGraph {
         }
     }
 
+    //Méthode d’indentification des groupes de  classes  couplées
+    // (services / composants / modules / fonctionnalités)
+    // à partir du cluster hierarchique
+
+
+
     //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération
     private Pair<String,String > clusterProches() {
         double maxPond = 0;
