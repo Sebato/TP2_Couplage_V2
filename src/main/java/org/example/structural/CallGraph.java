@@ -423,6 +423,50 @@ public class CallGraph {
     //Méthode d’indentification des groupes de  classes  couplées
     // (services / composants / modules / fonctionnalités)
     // à partir du cluster hierarchique
+//    public void moduleIdentifier(double moy) {
+//
+//            //si le cluster hierarchique est vide on ne peut pas identifier les modules
+//            if (ppList.isEmpty()) {
+//                System.err.println("Le cluster hierarchique est vide, impossible d'identifier les modules");
+//                return;
+//            }
+//
+//            //on initialise la variable de boucle qui va nous permettre de sortir de la boucle prématurément si besoin
+//            boolean stop = false;
+//
+//            //tant qu'on peut regrouper des clusters
+//            while(ppList.size()>1 && !stop) {
+//
+//                //on récupère les deux derniers clusters de la liste
+//                PreetyPrinter pp1 = ppList.get(ppList.size()-1);
+//                PreetyPrinter pp2 = ppList.get(ppList.size()-2);
+//
+//                //on récupère les deux classes de chaque cluster
+//                String c1 = pp1.cluster;
+//                String c2 = pp2.cluster;
+//
+//                //on récupère le couplage entre ces deux classes
+//                double couplage = getCouplage(c1, c2);
+//
+//                //si le couplage est supérieur à la moyenne on fusionne les deux clusters
+//                if (couplage > moy){
+//
+//                    //on crée le nom du noeud qui représentera ce regroupement
+//                    String newCluster = "(" + c1 + " , " + c2 + ")";
+//
+//                    //on crée le nouveau cluster
+//                    PreetyPrinter newPP = new PreetyPrinter(newCluster, pp1, pp2);
+//
+//                    //on l'ajoute à la liste
+//                    ppList.add(newPP);
+//
+//                    //on supprime les deux clusters qui ont été fusionnés
+//                    ppList.remove(pp1);
+//                    ppList.remove(pp2);
+//
+//                    //partie affichage dans CLI
+//                    System.out.println("\n");
+//    }
 
 
 
@@ -508,4 +552,6 @@ public class CallGraph {
         //comme on itère sur la collection des arêtes, mieux vaut ne peut pas les supprimer directement
         return edgesToRemove;
     }
+
+
 }

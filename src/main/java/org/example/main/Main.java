@@ -2,6 +2,8 @@ package org.example.main;
 
 import org.example.process.Analyzer;
 import org.example.structural.CallGraph;
+import spoon.Launcher;
+import spoon.reflect.declaration.CtClass;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -57,5 +59,13 @@ public class Main {
         //   - créer un cluster hierarchique à partir du graphe
         cg.clustering();
 
+        System.out.println("\n----------\nVeuillez entrer la moyenne de couplage minimum de chaque module : ");
+        double moy = sc.nextDouble();
+
+        cg.moduleIdentifier(moy);
+
+
+
+//        CtClass c = Launcher.parseClass("class A{}");
     }
 }
