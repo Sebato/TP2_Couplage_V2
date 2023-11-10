@@ -2,10 +2,13 @@ package org.example.main;
 
 import org.example.process.Analyzer;
 import org.example.structural.CallGraph;
+import org.example.structural.ClusterStruct;
 import spoon.Launcher;
 import spoon.reflect.declaration.CtClass;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -59,10 +62,22 @@ public class Main {
         //   - créer un cluster hierarchique à partir du graphe
         cg.clustering();
 
-        System.out.println("\n----------\nVeuillez entrer la moyenne de couplage minimum de chaque module : ");
-        double moy = sc.nextDouble();
 
-        cg.moduleIdentifier(moy);
+        //boucler si utilisateur donne une valeur > 1
+        double moy;
+        do {
+            System.out.println("\n----------\nVeuillez entrer la moyenne de couplage minimum de chaque module:\n" +
+                    "doit être compris entre 0 et 1");
+            moy = sc.nextDouble();
+        }while (moy>1 || moy < 0 );
+
+        System.err.println("\n####### clusters > 1 ? :" + cg.clusterList.size());
+
+        cg.moduleIdentifier(moy, cg.clusterList.getFirst());
+
+        System.out.println("les modules identifiés sont :\n");
+
+        cg.displayModules();
 
 
 

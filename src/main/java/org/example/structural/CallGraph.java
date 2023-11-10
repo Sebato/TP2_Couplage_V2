@@ -21,25 +21,20 @@ import static org.example.structural.ClusterStruct.ComparatorCouplage;
 
 public class CallGraph {
 
-    //le nom de chaque classe parsée sera associé à une map qui contiendra :
-    // les noms des classes qu'elle appelle et
-    // le nombre d'appel à ces dernieres
+    //le nom de chaque classe parsée sera associé à une map qui contiendra : les noms des classes qu'elle appelle et le nombre d'appel à ces dernieres
     private final Map<String,Map<String, Integer>> classMap;
     private int totalCouplage = 0;
 
     //structure pour le graphe de couplage pondéré
-    public SimpleWeightedGraph<String, DefaultWeightedEdge> weightedGraph =
-            new SimpleWeightedGraph<>
-                    (DefaultWeightedEdge.class);
+    public SimpleWeightedGraph<String, DefaultWeightedEdge> weightedGraph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
 
     //structure de transition entre le graphe de couplage pondéré et le cluster hierarchique
-    public SimpleWeightedGraph<String, DefaultWeightedEdge> clusterGraph =
-            new SimpleWeightedGraph<>
-                    (DefaultWeightedEdge.class);
+    public SimpleWeightedGraph<String, DefaultWeightedEdge> clusterGraph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
 
-    //pour l'affichage du cluster hierarchique
+    //pour la structure du cluster hierarchique
     public ArrayList<ClusterStruct> clusterList = new ArrayList<>();
 
+    //Constrcuteur
     public CallGraph() {
         classMap = new HashMap<>();
     }
@@ -49,12 +44,7 @@ public class CallGraph {
         return totalCouplage;
     }
 
-    public void printAllClasses(){
-        System.out.println("\n---------\nClasses : \n");
-        for(Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
-            System.out.println(entry.getKey());
-        }
-    }
+    //modifiers
 
     //A chaque ajout de classe on lui associe une nouvelle map
     public void addClassKey(String Ckey) {
@@ -126,12 +116,12 @@ public class CallGraph {
         }
     }
 
-//    Couplage (A,B) = Nombre de relations (relation = appel)
-//    entre les couples de méthodes appartenant respectivement
-//    aux deux classes en question
-//    (A.mi et B.mj) / nombre de toutes  les  relations (binaire)
-//    entre  les  couples  de  méthodes  appartenant respectivement
-//    à n’importe quelles deux classes de l’application analysée
+    //    Couplage (A,B) = Nombre de relations (relation = appel)
+    //    entre les couples de méthodes appartenant respectivement
+    //    aux deux classes en question
+    //    (A.mi et B.mj) / nombre de toutes  les  relations (binaire)
+    //    entre  les  couples  de  méthodes  appartenant respectivement
+    //    à n’importe quelles deux classes de l’application analysée
 
     public float getCouplage(String c1, String c2){
         float couplage = 0;
@@ -156,45 +146,7 @@ public class CallGraph {
         return 0;
     }
 
-    // affiche tous les couplages de l'application (displayAll = true)
-    // ou seulement ceux qui sont > 0 (displayAll = false)
-    public void allCouplages(boolean displayAll){
-        System.out.println("\n---------\nCouplage Total de l'application : "+totalCouplage+"\n");
 
-        //on garde l'info des paires de classes déjà affichées
-        List<Pair<String, String>> done = new ArrayList<>();
-        float couplage;
-
-        for (Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
-            String s1 = entry.getKey();
-
-            for (Map.Entry<String, Integer> entry2 : entry.getValue().entrySet()) {
-                String s2 = entry2.getKey();
-
-                if (!s1.equals(s2)) {
-
-                    //pour éviter de parcourir deux fois la même paire de classes
-                    if (!done.contains(new ImmutablePair<>(s1, s2)) && !done.contains(new ImmutablePair<>(s2, s1))) {
-
-                        couplage = getCouplage(s1, s2);
-                        if (displayAll || couplage > 0) {
-                            System.out.println("Couplage entre (" + s1 + " et " + s2 + ") = " + couplage);
-                        }
-                        done.add(new ImmutablePair<>(s1, s2));
-                    }
-                }
-            }
-        }
-    }
-
-    //Methode d'affichage de la liste des sommets et des arêtes du graphe avec les poids
-    public void printGraphe(SimpleWeightedGraph<String, DefaultWeightedEdge> g){
-        System.out.println("\n---------\nGraphe : \n");
-        System.out.println("sommets : "+g.vertexSet());
-        for (DefaultWeightedEdge e : g.edgeSet().stream().toList()){
-            System.out.println(g.getEdgeSource(e)+" -> "+g.getEdgeTarget(e)+" : "+g.getEdgeWeight(e));
-        }
-    }
 
     //Methode de création du graphe pondéré à partir de la map de couplage
     public void createGraph(){
@@ -249,35 +201,7 @@ public class CallGraph {
         }
     }
 
-    //exporter le graphe en .dot
-    public void exportGraphToDot( String outputPath) {
-        DOTExporter<String, DefaultWeightedEdge> exporter = new DOTExporter<>();
 
-        //set vertex id with lambdas BECAUSE THEY THOUGHT IT WAS A GOOD IDEA
-        exporter.setVertexIdProvider((v) -> v);
-
-        //make sure the WEIGHTS are printed
-        exporter.setEdgeAttributeProvider((e) -> {
-            Map<String, Attribute> map = new LinkedHashMap<>();
-            map.put("weight", DefaultAttribute.createAttribute(weightedGraph.getEdgeWeight(e)));
-            map.put("label", DefaultAttribute.createAttribute(new DecimalFormat("#.##").format(weightedGraph.getEdgeWeight(e))));
-            return map;
-        });
-
-        try {
-            FileWriter fileWriter = new FileWriter(outputPath);
-            exporter.exportGraph(weightedGraph, fileWriter);
-
-            System.out.println("\n----------Graphe exporté ici : " + outputPath);
-            System.out.println("\n Pour en générer un fichier PDF, tapez la commande suivante " +
-                    "dans un terminal ouvert à l'endroit où vous souhaitez l'enregistrer : " +
-                    "\ndot -Tpdf "+outputPath+" -o <leNomDeVotreGraphe>.pdf\n");
-
-            fileWriter.close();
-        } catch (ExportException | IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     //Methode de création du cluster hierarchique à partir du graphe pondéré
     public void clustering(){
@@ -438,33 +362,81 @@ public class CallGraph {
 
     }
 
+
+
     //Méthode d’indentification des groupes de  classes  couplées
     // (services / composants / modules / fonctionnalités)
     // à partir du cluster hierarchique
-
     // - Une application doit être composée au plus de M/2 modules
     //      (M est le nombre de classes dans l’application).
-
     // - Chaque module doit contenir uniquement les classes d’une seule branche
     //      du dendrogramme.
-
     // - La moyenne du couplage de tous les couples de classes du module
     //      doit être supérieure à CP (CP est un paramètre).
-
-    public void moduleIdentifier(double CP) {
+    public void moduleIdentifier(double CP, ClusterStruct cs) {
 
         // on va considérer qu'un cluster constitué d'une seule classe n'est pas compté parmi les modules possibles.
-        // on parcourt tous les clusters et on regarde la moyenne de couplage de chacun,
-        // si on en trouve qui ont une moyenne inférieure à CP
 
+        // on regarde la moyenne de couplage de notre Cluster.
+        // si elle est > à CP on regarde la moyenne de couplage de ses deux sous clusters.
+        //      si les deux sont > à CP on recommence l'algo sur eux individuellement.
+        //      sinon si une est = 0 mais pas l'autre :
+        //          on lance l'algo sur l'autre individuellement.
+        //      sinon si les deux sont > 0 mais < CP :
+        //          on ajoute le cluster actuel à la liste des clusters identifiés.
+        //
 
+        //les Modules déja identifiés seront stockés dans this.clusterList
+        //attention on supprime jamais le premier élément qui etait le cluster final !!
 
+        //le nombre de clusters identifiés
+        int cpt = this.clusterList.size()-1;
 
-
-        //si le cluster hierarchique est vide on ne peut pas identifier les modules
-        if (clusterList.isEmpty()) {
-            System.err.println("Le cluster hierarchique est vide, impossible d'identifier les modules");
+        //si on a atteint la taille max on s'arrête
+        if (cpt >= clusterGraph.vertexSet().size()/2){
             return;
+        }
+        //sinon on lance l'algo
+        else{
+            //si la moyenne de couplage interne du cluster est supérieure à CP
+            if (cs.couplageInterne > CP){
+
+                //on récupère les deux sous clusters
+                ClusterStruct cs1 = cs.nodeL;
+                ClusterStruct cs2 = cs.nodeR;
+
+                //on récupère leur moyenne de couplage interne
+                double moy1 = cs1.couplageInterne;
+                double moy2 = cs2.couplageInterne;
+
+                //si les deux sont > à CP
+                if (moy1 > CP && moy2 > CP){
+
+                    //on lance l'algo sur les deux sous clusters
+                    moduleIdentifier(CP, cs1);
+                    moduleIdentifier(CP, cs2);
+
+                    //on supprime le cluster actuel des clusters identifiés
+                    //attention on ne supprime pas le premier élément qui est le cluster final !!
+                    this.clusterList.remove(cs);
+                    return;
+                }
+                //si moy1 > CP et moy2 == 0
+                else if (moy1 > CP && moy2 == 0){
+                    //on on lance l'algo sur le sous cluster 1
+                    moduleIdentifier(CP, cs1);
+                }
+                //sinon si moy2 > CP et moy1 == 0
+                else if (moy2 > CP && moy1 == 0){
+                    //on on lance l'algo sur le sous cluster 2
+                    moduleIdentifier(CP, cs2);
+                }
+                //sinon un des deux aura un couplage interne insuffisant de toute façon donc on ajoute le cluster actuel
+                else{
+                    //on ajoute le cluster actuel à la liste des clusters identifiés
+                    this.clusterList.add(cs);
+                }
+            }
         }
     }
 
@@ -494,6 +466,8 @@ public class CallGraph {
         }
         return new ImmutableTriple<>(c1, c2, maxPond);
     }
+
+
 
     //modifie le clusterGraph pour transférer les arêtes au nouveau cluster fusionné
     //et renvoie la liste des arêtes à supprimer
@@ -554,4 +528,98 @@ public class CallGraph {
     }
 
 
+
+    //METHODE D'EXPORT
+
+    //exporter le graphe en .dot
+    public void exportGraphToDot( String outputPath) {
+        DOTExporter<String, DefaultWeightedEdge> exporter = new DOTExporter<>();
+
+        //set vertex id with lambdas BECAUSE THEY THOUGHT IT WAS A GOOD IDEA
+        exporter.setVertexIdProvider((v) -> v);
+
+        //make sure the WEIGHTS are printed
+        exporter.setEdgeAttributeProvider((e) -> {
+            Map<String, Attribute> map = new LinkedHashMap<>();
+            map.put("weight", DefaultAttribute.createAttribute(weightedGraph.getEdgeWeight(e)));
+            map.put("label", DefaultAttribute.createAttribute(new DecimalFormat("#.##").format(weightedGraph.getEdgeWeight(e))));
+            return map;
+        });
+
+        try {
+            FileWriter fileWriter = new FileWriter(outputPath);
+            exporter.exportGraph(weightedGraph, fileWriter);
+
+            System.out.println("\n----------Graphe exporté ici : " + outputPath);
+            System.out.println("\n Pour en générer un fichier PDF, tapez la commande suivante " +
+                    "dans un terminal ouvert à l'endroit où vous souhaitez l'enregistrer : " +
+                    "\ndot -Tpdf "+outputPath+" -o <leNomDeVotreGraphe>.pdf\n");
+
+            fileWriter.close();
+        } catch (ExportException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+    //METHODES D'AFFICHAGE
+
+    public void printAllClasses(){
+        System.out.println("\n---------\nClasses : \n");
+        for(Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
+            System.out.println(entry.getKey());
+        }
+    }
+
+    // affiche tous les couplages de l'application (displayAll = true)
+    // ou seulement ceux qui sont > 0 (displayAll = false)
+    public void allCouplages(boolean displayAll){
+        System.out.println("\n---------\nCouplage Total de l'application : "+totalCouplage+"\n");
+
+        //on garde l'info des paires de classes déjà affichées
+        List<Pair<String, String>> done = new ArrayList<>();
+        float couplage;
+
+        for (Map.Entry<String, Map<String, Integer>> entry : classMap.entrySet()) {
+            String s1 = entry.getKey();
+
+            for (Map.Entry<String, Integer> entry2 : entry.getValue().entrySet()) {
+                String s2 = entry2.getKey();
+
+                if (!s1.equals(s2)) {
+
+                    //pour éviter de parcourir deux fois la même paire de classes
+                    if (!done.contains(new ImmutablePair<>(s1, s2)) && !done.contains(new ImmutablePair<>(s2, s1))) {
+
+                        couplage = getCouplage(s1, s2);
+                        if (displayAll || couplage > 0) {
+                            System.out.println("Couplage entre (" + s1 + " et " + s2 + ") = " + couplage);
+                        }
+                        done.add(new ImmutablePair<>(s1, s2));
+                    }
+                }
+            }
+        }
+    }
+
+    //Methode d'affichage de la liste des sommets et des arêtes du graphe avec les poids
+    public void printGraphe(SimpleWeightedGraph<String, DefaultWeightedEdge> g){
+        System.out.println("\n---------\nGraphe : \n");
+        System.out.println("sommets : "+g.vertexSet());
+        for (DefaultWeightedEdge e : g.edgeSet().stream().toList()){
+            System.out.println(g.getEdgeSource(e)+" -> "+g.getEdgeTarget(e)+" : "+g.getEdgeWeight(e));
+        }
+    }
+
+    //à appeler apres ModuleIdentifier, affiche les clusters dans clusterList à l'exception du premier
+    //(sauf si ModuleIdentifier n'a pas pu identifier de modules)
+    public void displayModules() {
+        if (clusterList.size() > 1) {
+            System.out.println("\n----------\nModules identifiés : \n");
+            for (int i = 1; i < clusterList.size(); i++) {
+                System.out.println(clusterList.get(i).cluster+"\n");
+            }
+        }
+    }
 }
