@@ -69,7 +69,7 @@ public class CallGraph {
             //pour toutes les methodes invoquées, on ajoute un couplage entre la classe courante et la classe invoquée
             for (MethodInvocation mi : methodDeclarationVisitor.getMethodsCalled()){
 
-                if (mi.getExpression() != null) { // c'est null quand appel à this implicite par exemple
+                if (mi.getExpression() != null) { // c'est null quand appel à this implicite par exemple ou appel à une méthode statique
 
                     //ATTENTION POSSIBILITÉ D'ÉRREUR D'EXECUTION :
                     // bug constaté dans la librairie :
@@ -84,6 +84,18 @@ public class CallGraph {
                         // du genre System.out.println, Iterator, List.contains()...
                         // ou les appels a une Interface, Visitor ou autre
 
+                        if (classMap.containsKey(invokedMethodName)) {
+                            addCouplage(c.getName().getFullyQualifiedName(), invokedMethodName);
+                        }
+                    }
+                    //si le resolveTypeBinding() est null c'est peut-être un appel à une Méthode statique
+                    //on doit récupérer l'expression et vérifier si elle est bien une classe du projet
+                    else if (mi.getExpression().toString().length() > 1) {
+
+                        //on récupère l'expression
+                        String invokedMethodName = mi.getExpression().toString();
+
+                        //si l'expression est une classe du projet on ajoute le couplage
                         if (classMap.containsKey(invokedMethodName)) {
                             addCouplage(c.getName().getFullyQualifiedName(), invokedMethodName);
                         }
@@ -201,7 +213,90 @@ public class CallGraph {
         }
     }
 
+    //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération et cette valeur
+    private Triple<String,String,Double> clusterProches() {
+        double maxPond = 0;
+        double eWeight;
+        String c1 = null, c2 = null;
 
+        //si il n'y a plus d'arêtes on renvoie null
+        if (clusterGraph.edgeSet().isEmpty()) return null;
+
+        //on récupère les classes de l'arête avec la plus forte pondération
+        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
+
+            //poids de l'arête en cours
+            eWeight = clusterGraph.getEdgeWeight(e);
+
+            //comparaison et mise à jour du max
+            if( eWeight > maxPond) {
+                maxPond = eWeight;
+                c1 = clusterGraph.getEdgeSource(e);
+                c2 = clusterGraph.getEdgeTarget(e);
+            }
+        }
+        return new ImmutableTriple<>(c1, c2, maxPond);
+    }
+
+
+
+    //modifie le clusterGraph pour transférer les arêtes au nouveau cluster fusionné
+    //et renvoie la liste des arêtes à supprimer
+    private Collection<DefaultWeightedEdge> resolveNewEdges(String newCluster, String nodeL, String nodeR) {
+
+        List<DefaultWeightedEdge> edgesToRemove = new ArrayList<>();
+
+        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
+
+            //si source d'une arête = nodeL ou nodeR, et que target != l'autre
+            // on la remplace la source par newCluster
+            if((clusterGraph.getEdgeSource(e).equals(nodeL) && !clusterGraph.getEdgeTarget(e).equals(nodeR)) ||
+                    (clusterGraph.getEdgeSource(e).equals(nodeR) && !clusterGraph.getEdgeTarget(e).equals(nodeL))){
+
+                //si on a pas déjà créé une arête entre newCluster et le target de l'arête
+                if(!clusterGraph.containsEdge(newCluster, clusterGraph.getEdgeTarget(e))){
+
+                    //on ajoute une arête entre newCluster et le target de l'arête
+                    clusterGraph.addEdge(newCluster, clusterGraph.getEdgeTarget(e));
+                    //on oublie PAS de rajouter le poids
+                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)),
+                            clusterGraph.getEdgeWeight(e));
+
+                }
+                //sinon on incrémente le poids de l'arête
+                else{
+                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)),
+                            clusterGraph.getEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)))
+                                    + clusterGraph.getEdgeWeight(e));
+                }
+                edgesToRemove.add(e);
+            }
+
+            //idem pour target = nodeL ou nodeR, avec source != l'autre
+            else if((clusterGraph.getEdgeTarget(e).equals(nodeL) && !clusterGraph.getEdgeSource(e).equals(nodeR)) ||
+                    (clusterGraph.getEdgeTarget(e).equals(nodeR) && !clusterGraph.getEdgeSource(e).equals(nodeL))){
+
+                //si on a pas déjà une arête entre newCluster et le source de l'arête
+                if(!clusterGraph.containsEdge(clusterGraph.getEdgeSource(e),newCluster)){
+
+                    //on ajoute une arête entre newCluster et le source de l'arête
+                    clusterGraph.addEdge(clusterGraph.getEdgeSource(e),newCluster);
+                    //on oublie pas de rajouter le poids encore une fois
+                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e),newCluster),
+                            clusterGraph.getEdgeWeight(e));
+                }
+                //sinon on incrémente le poids de l'arête
+                else {
+                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e), newCluster),
+                            clusterGraph.getEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e), newCluster))
+                                    + clusterGraph.getEdgeWeight(e));
+                }
+                edgesToRemove.add(e);
+            }
+        }
+        //comme on itère sur la collection des arêtes, mieux vaut ne peut pas les supprimer directement
+        return edgesToRemove;
+    }
 
     //Methode de création du cluster hierarchique à partir du graphe pondéré
     public void clustering(){
@@ -222,8 +317,6 @@ public class CallGraph {
             clusterGraph.addVertex(c);
             notDoneYet.add(c);
         }
-
-        System.out.println(clusterGraph.vertexSet());
 
         //on recupère toutes les arêtes (avec les poids!!) du graphe pondéré
         for (DefaultWeightedEdge e : weightedGraph.edgeSet().stream().toList()){
@@ -253,9 +346,6 @@ public class CallGraph {
 
             //si il n'y a plus d'arêtes
             if (fuseNodes == null) {
-                System.out.println("######## plus d'arêtes à fusionner ########\n" +
-                        "les clusters non encore reliés seront ajoutés par ordre de couplage intérieur \n" +
-                        "les classes restantes le seront par la suite dans leur ordre d'arrivée.");
 
                 //on ajoute les classes restantes à clusterList
                 //ajouter tous les sommets restants dans la liste des clusters
@@ -266,12 +356,6 @@ public class CallGraph {
                 //trie les clusters dans l'ordre décroissant
                 clusterList.sort(ComparatorCouplage);
                 Collections.reverse(clusterList);
-
-                System.out.println(clusterList);
-                System.out.println("clusters triés : ");
-                for (ClusterStruct c : clusterList){
-                    System.out.println(c.cluster + " : " + c.couplageInterne);
-                }
 
                 //on va dire de fusionner les deux premiers éléments de la ClusterList
                 nodeL = clusterList.get(0).cluster;
@@ -393,7 +477,7 @@ public class CallGraph {
         int cpt = this.clusterList.size()-1;
 
         //si on a atteint la taille max on s'arrête
-        if (cpt >= clusterGraph.vertexSet().size()/2){
+        if (cpt >= weightedGraph.vertexSet().size()/2){
             return;
         }
         //sinon on lance l'algo
@@ -418,7 +502,7 @@ public class CallGraph {
 
                     //on supprime le cluster actuel des clusters identifiés
                     //attention on ne supprime pas le premier élément qui est le cluster final !!
-                    this.clusterList.remove(cs);
+                    this.clusterList.add(cs);
                     return;
                 }
                 //si moy1 > CP et moy2 == 0
@@ -442,90 +526,7 @@ public class CallGraph {
 
 
 
-    //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération et cette valeur
-    private Triple<String,String,Double> clusterProches() {
-        double maxPond = 0;
-        double eWeight;
-        String c1 = null, c2 = null;
 
-        //si il n'y a plus d'arêtes on renvoie null
-        if (clusterGraph.edgeSet().isEmpty()) return null;
-
-        //on récupère les classes de l'arête avec la plus forte pondération
-        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
-
-            //poids de l'arête en cours
-            eWeight = clusterGraph.getEdgeWeight(e);
-
-            //comparaison et mise à jour du max
-            if( eWeight > maxPond) {
-                maxPond = eWeight;
-                c1 = clusterGraph.getEdgeSource(e);
-                c2 = clusterGraph.getEdgeTarget(e);
-            }
-        }
-        return new ImmutableTriple<>(c1, c2, maxPond);
-    }
-
-
-
-    //modifie le clusterGraph pour transférer les arêtes au nouveau cluster fusionné
-    //et renvoie la liste des arêtes à supprimer
-    private Collection<DefaultWeightedEdge> resolveNewEdges(String newCluster, String nodeL, String nodeR) {
-
-        List<DefaultWeightedEdge> edgesToRemove = new ArrayList<>();
-
-        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
-
-            //si source d'une arête = nodeL ou nodeR, et que target != l'autre
-            // on la remplace la source par newCluster
-            if((clusterGraph.getEdgeSource(e).equals(nodeL) && !clusterGraph.getEdgeTarget(e).equals(nodeR)) ||
-                    (clusterGraph.getEdgeSource(e).equals(nodeR) && !clusterGraph.getEdgeTarget(e).equals(nodeL))){
-
-                //si on a pas déjà créé une arête entre newCluster et le target de l'arête
-                if(!clusterGraph.containsEdge(newCluster, clusterGraph.getEdgeTarget(e))){
-
-                    //on ajoute une arête entre newCluster et le target de l'arête
-                    clusterGraph.addEdge(newCluster, clusterGraph.getEdgeTarget(e));
-                    //on oublie PAS de rajouter le poids
-                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)),
-                            clusterGraph.getEdgeWeight(e));
-
-                }
-                //sinon on incrémente le poids de l'arête
-                else{
-                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)),
-                            clusterGraph.getEdgeWeight(clusterGraph.getEdge(newCluster, clusterGraph.getEdgeTarget(e)))
-                                    + clusterGraph.getEdgeWeight(e));
-                }
-                edgesToRemove.add(e);
-            }
-
-            //idem pour target = nodeL ou nodeR, avec source != l'autre
-            else if((clusterGraph.getEdgeTarget(e).equals(nodeL) && !clusterGraph.getEdgeSource(e).equals(nodeR)) ||
-                    (clusterGraph.getEdgeTarget(e).equals(nodeR) && !clusterGraph.getEdgeSource(e).equals(nodeL))){
-
-                //si on a pas déjà une arête entre newCluster et le source de l'arête
-                if(!clusterGraph.containsEdge(clusterGraph.getEdgeSource(e),newCluster)){
-
-                    //on ajoute une arête entre newCluster et le source de l'arête
-                    clusterGraph.addEdge(clusterGraph.getEdgeSource(e),newCluster);
-                    //on oublie pas de rajouter le poids encore une fois
-                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e),newCluster),
-                            clusterGraph.getEdgeWeight(e));
-                }
-                //sinon on incrémente le poids de l'arête
-                else {
-                    clusterGraph.setEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e), newCluster),
-                            clusterGraph.getEdgeWeight(clusterGraph.getEdge(clusterGraph.getEdgeSource(e), newCluster))
-                                    + clusterGraph.getEdgeWeight(e));
-                }
-                edgesToRemove.add(e);
-            }
-        }
-        //comme on itère sur la collection des arêtes, mieux vaut ne peut pas les supprimer directement
-        return edgesToRemove;
-    }
 
 
 
@@ -618,7 +619,7 @@ public class CallGraph {
         if (clusterList.size() > 1) {
             System.out.println("\n----------\nModules identifiés : \n");
             for (int i = 1; i < clusterList.size(); i++) {
-                System.out.println(clusterList.get(i).cluster+"\n");
+                System.out.println(clusterList.get(i)+"\n poids : "+clusterList.get(i).couplageInterne+"\n###########################\n");
             }
         }
     }

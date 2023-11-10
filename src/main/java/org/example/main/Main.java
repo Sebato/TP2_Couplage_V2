@@ -67,15 +67,13 @@ public class Main {
         double moy;
         do {
             System.out.println("\n----------\nVeuillez entrer la moyenne de couplage minimum de chaque module:\n" +
-                    "doit être compris entre 0 et 1");
+                    "doit être compris entre 0 et 1 (la virgule est le séparateur décimal)");
             moy = sc.nextDouble();
         }while (moy>1 || moy < 0 );
 
-        System.err.println("\n####### clusters > 1 ? :" + cg.clusterList.size());
-
         cg.moduleIdentifier(moy, cg.clusterList.getFirst());
 
-        System.out.println("les modules identifiés sont :\n");
+        System.out.println("les modules identifiés avec une moyenne de couplage > "+moy+" sont les suivants:\n");
 
         cg.displayModules();
 
