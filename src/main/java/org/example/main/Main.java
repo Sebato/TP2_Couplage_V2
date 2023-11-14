@@ -76,9 +76,5 @@ public class Main {
         System.out.println("les modules identifiés avec une moyenne de couplage > "+moy+" sont les suivants:\n");
 
         cg.displayModules();
-
-
-
-//        CtClass c = Launcher.parseClass("class A{}");
     }
 }

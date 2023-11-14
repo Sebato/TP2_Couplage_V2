@@ -9,43 +9,36 @@ public class ClusterStruct{
     public ClusterStruct nodeL;
     public ClusterStruct nodeR;
 
-    //finalement on va utiliser la structure pour stocker aussi les poids...
-    //je voulais réserver cette classe à l'affichage à l'origine mais ça sauve beaucoup de calculs
-    public double couplageInterne;
+    public Double moycouplage = null;
 
-    public ClusterStruct(String cluster, ClusterStruct nodeL, ClusterStruct nodeR, Double coup) {
+    public ClusterStruct(String cluster, ClusterStruct nodeL, ClusterStruct nodeR) {
         this.cluster = cluster;
         this.nodeL = nodeL;
         this.nodeR = nodeR;
-        this.couplageInterne = coup + nodeL.couplageInterne + nodeR.couplageInterne;
     }
 
-    public ClusterStruct(String newCluster, ClusterStruct c, String nodeR, Double coup) {
+    public ClusterStruct(String newCluster, ClusterStruct c, String nodeR) {
         this.cluster = newCluster;
         this.nodeL = c;
         this.nodeR = new ClusterStruct(nodeR);
-        this.couplageInterne = coup + c.couplageInterne;
     }
 
-    public ClusterStruct(String newCluster, String nodeL, ClusterStruct c, Double coup) {
+    public ClusterStruct(String newCluster, String nodeL, ClusterStruct c) {
         this.cluster = newCluster;
         this.nodeL = new ClusterStruct(nodeL);
         this.nodeR = c;
-        this.couplageInterne = coup + c.couplageInterne;
     }
 
-    public ClusterStruct(String cluster, String nodeL, String nodeR, Double coup) {
+    public ClusterStruct(String cluster, String nodeL, String nodeR) {
         this.cluster = cluster;
         this.nodeL = new ClusterStruct(nodeL);
         this.nodeR = new ClusterStruct(nodeR);
-        this.couplageInterne = coup;
     }
 
     public ClusterStruct(String cluster){
         this.cluster = cluster;
         this.nodeL = null;
         this.nodeR = null;
-        this.couplageInterne = 0;
     }
 
 
@@ -91,7 +84,9 @@ public class ClusterStruct{
 
         @Override
         public int compare(ClusterStruct c1, ClusterStruct c2) {
-            return Double.compare(c1.couplageInterne, c2.couplageInterne);
+            if (c1.moycouplage == null && c2.moycouplage != null) return 1;
+            if (c1.moycouplage != null && c2.moycouplage == null) return -1;
+            return Double.compare(c1.moycouplage, c2.moycouplage);
         }
     };
 

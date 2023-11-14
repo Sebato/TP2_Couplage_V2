@@ -158,7 +158,22 @@ public class CallGraph {
         return 0;
     }
 
+    public double getMoyCouplage(List<String> classes){
+        if (classes.size()<2) return 0;
+        float moy = 0;
+        int nb = 0;
 
+        //pour chaque classe de la liste
+        for (String c : classes){
+
+            //on récupère la moyenne de couplage avec toutes les autres classes
+            for (String c2 : classes){
+                moy += getCouplage(c,c2);
+                nb++;
+            }
+        }
+        return moy/nb;
+    }
 
     //Methode de création du graphe pondéré à partir de la map de couplage
     public void createGraph(){
@@ -214,7 +229,7 @@ public class CallGraph {
     }
 
     //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération et cette valeur
-    private Triple<String,String,Double> clusterProches() {
+    private Pair<String,String> clusterProches() {
         double maxPond = 0;
         double eWeight;
         String c1 = null, c2 = null;
@@ -235,7 +250,7 @@ public class CallGraph {
                 c2 = clusterGraph.getEdgeTarget(e);
             }
         }
-        return new ImmutableTriple<>(c1, c2, maxPond);
+        return new ImmutablePair<>(c1, c2);
     }
 
 
@@ -338,11 +353,10 @@ public class CallGraph {
 //            System.out.println("\n -- taille du cluster : "+clusterGraph.vertexSet().size());
 
             //on récupère les classes de l'arête avec la plus forte pondération
-            Triple<String, String, Double> fuseNodes = clusterProches();
+            Pair<String, String> fuseNodes = clusterProches();
 
             String nodeL;
             String nodeR;
-            Double nodeCoup;
 
             //si il n'y a plus d'arêtes
             if (fuseNodes == null) {
@@ -353,21 +367,24 @@ public class CallGraph {
                     clusterList.add(new ClusterStruct(s));
                 }
 
-                //trie les clusters dans l'ordre décroissant
+                //initialiser la valeur moycouplage de chaque cluster
+                for(ClusterStruct cs : clusterList){
+                    calcMoyCoup(cs);
+                }
+
+                //trier les clusters dans l'ordre décroissant (assure que les classes isolées sont derrière)
                 clusterList.sort(ComparatorCouplage);
                 Collections.reverse(clusterList);
 
                 //on va dire de fusionner les deux premiers éléments de la ClusterList
                 nodeL = clusterList.get(0).cluster;
                 nodeR = clusterList.get(1).cluster;
-                nodeCoup = 0.0;
 
                 //hoping it works
             }else {
 
                 nodeL = fuseNodes.getLeft();
-                nodeR = fuseNodes.getMiddle();
-                nodeCoup = fuseNodes.getRight();
+                nodeR = fuseNodes.getRight();
             }
 
             //on crée le nom du noeud qui représentera ce regroupement
@@ -395,8 +412,9 @@ public class CallGraph {
 
 
             //partie structurelle du cluster
+
             if (clusterList.isEmpty()){
-                clusterList.add(new ClusterStruct(newCluster, nodeL, nodeR, nodeCoup ));
+                clusterList.add(new ClusterStruct(newCluster, nodeL, nodeR));
 
             }else{
 
@@ -408,22 +426,22 @@ public class CallGraph {
                 for (ClusterStruct cl : clusterList){
 
                     if (cl.cluster.equals(nodeL)){
-                        newClust1 = new ClusterStruct(newCluster, cl, nodeR, nodeCoup);
+                        newClust1 = new ClusterStruct(newCluster, cl, nodeR);
                         ClusToRem.add(cl);
                     }else if (cl.cluster.equals(nodeR)){
-                        newClust2 = new ClusterStruct(newCluster, nodeL, cl, nodeCoup);
+                        newClust2 = new ClusterStruct(newCluster, nodeL, cl);
                         ClusToRem.add(cl);
                     }
                 }
 
                 //si on a eu deux correspondances : on fusionne les deux pp
                 if (newClust1 != null && newClust2 != null){
-                    ClusterStruct newClust = new ClusterStruct(newCluster,newClust1.nodeL, newClust2.nodeR, nodeCoup );
+                    ClusterStruct newClust = new ClusterStruct(newCluster,newClust1.nodeL, newClust2.nodeR );
                     clusterList.add(newClust);
                 }
                 //cas si aucune correspondance
                 else if (newClust1 == null && newClust2 == null){
-                    clusterList.add(new ClusterStruct(newCluster, nodeL, nodeR, nodeCoup));
+                    clusterList.add(new ClusterStruct(newCluster, nodeL, nodeR));
                 }
                 //Cas si correspondance avec seulement nodeL
                 else if (newClust2 == null){
@@ -440,13 +458,10 @@ public class CallGraph {
                 }
             }
         }
-
         //on affiche le dernier cluster restant de la liste (le plus haut dans la hierarchie normalement
         System.out.println("\n----------\nCluster hierarchique : \n" + clusterList.get(0));
 
     }
-
-
 
     //Méthode d’indentification des groupes de  classes  couplées
     // (services / composants / modules / fonctionnalités)
@@ -459,16 +474,17 @@ public class CallGraph {
     //      doit être supérieure à CP (CP est un paramètre).
     public void moduleIdentifier(double CP, ClusterStruct cs) {
 
-        // on va considérer qu'un cluster constitué d'une seule classe n'est pas compté parmi les modules possibles.
+        // on va considérer que les classes qui n'avaient pas de couplage ne peuvent pas être dans un module
 
         // on regarde la moyenne de couplage de notre Cluster.
-        // si elle est > à CP on regarde la moyenne de couplage de ses deux sous clusters.
-        //      si les deux sont > à CP on recommence l'algo sur eux individuellement.
-        //      sinon si une est = 0 mais pas l'autre :
-        //          on lance l'algo sur l'autre individuellement.
-        //      sinon si les deux sont > 0 mais < CP :
-        //          on ajoute le cluster actuel à la liste des clusters identifiés.
-        //
+        // si elle est > à CP ET qu'une des branches n'est pas une classe isolée :
+        //      on regarde la moyenne de couplage de ses deux sous clusters.
+        //          si les deux sont > à CP
+        //              on recommence l'algo sur eux individuellement.
+        //          sinon si une est = 0 mais pas l'autre :
+        //              on lance l'algo sur l'autre individuellement.
+        //          sinon si les deux sont > 0 mais < CP :
+        //              on ajoute le cluster actuel à la liste des clusters identifiés.
 
         //les Modules déja identifiés seront stockés dans this.clusterList
         //attention on supprime jamais le premier élément qui etait le cluster final !!
@@ -482,16 +498,18 @@ public class CallGraph {
         }
         //sinon on lance l'algo
         else{
+            double moyCoup = calcMoyCoup(cs);
+
             //si la moyenne de couplage interne du cluster est supérieure à CP
-            if (cs.couplageInterne > CP){
+            if (moyCoup > CP){
 
                 //on récupère les deux sous clusters
                 ClusterStruct cs1 = cs.nodeL;
                 ClusterStruct cs2 = cs.nodeR;
 
                 //on récupère leur moyenne de couplage interne
-                double moy1 = cs1.couplageInterne;
-                double moy2 = cs2.couplageInterne;
+                double moy1 = calcMoyCoup(cs1);
+                double moy2 = calcMoyCoup(cs2);
 
                 //si les deux sont > à CP
                 if (moy1 > CP && moy2 > CP){
@@ -502,16 +520,15 @@ public class CallGraph {
 
                     //on supprime le cluster actuel des clusters identifiés
                     //attention on ne supprime pas le premier élément qui est le cluster final !!
-                    this.clusterList.add(cs);
-                    return;
+                    if (!(this.clusterList.get(0).equals(cs))) this.clusterList.remove(cs);
                 }
-                //si moy1 > CP et moy2 == 0
-                else if (moy1 > CP && moy2 == 0){
+                //si moy1 > CP et moy2 == 0 ET que la deuxième branche est une classe isolée
+                else if (moy1 > CP && moy2 == 0 && classMap.get(cs2.cluster) == null){
                     //on on lance l'algo sur le sous cluster 1
                     moduleIdentifier(CP, cs1);
                 }
-                //sinon si moy2 > CP et moy1 == 0
-                else if (moy2 > CP && moy1 == 0){
+                //sinon si moy2 > CP et moy1 == 0 ET que la deuxième branche est une classe isolée
+                else if (moy2 > CP && moy1 == 0 && classMap.get(cs1.cluster) == null){
                     //on on lance l'algo sur le sous cluster 2
                     moduleIdentifier(CP, cs2);
                 }
@@ -524,10 +541,16 @@ public class CallGraph {
         }
     }
 
-
-
-
-
+    //calcule la moyenne de couplage interne d'un cluster
+    private double calcMoyCoup(ClusterStruct cs) {
+        double moyCoup = 0;
+        if (cs.moycouplage == null) {
+            moyCoup = getMoyCouplage(cs.getComposants());
+            cs.moycouplage = moyCoup;
+            return moyCoup;
+        }
+        else return cs.moycouplage;
+    }
 
 
     //METHODE D'EXPORT
@@ -617,9 +640,9 @@ public class CallGraph {
     //(sauf si ModuleIdentifier n'a pas pu identifier de modules)
     public void displayModules() {
         if (clusterList.size() > 1) {
-            System.out.println("\n----------\nModules identifiés : \n");
+            System.out.println("\n----------\nModules identifiés : "+(clusterList.size()-1)+"\n");
             for (int i = 1; i < clusterList.size(); i++) {
-                System.out.println(clusterList.get(i)+"\n poids : "+clusterList.get(i).couplageInterne+"\n###########################\n");
+                System.out.println(clusterList.get(i)+"\n moyenne de couplage : "+clusterList.get(i).moycouplage+"\n###########################\n");
             }
         }
     }
