@@ -1,0 +1,22 @@
+strict graph G {
+  Controller;
+  View;
+  InitialContext;
+  ServiceLocator;
+  MVAssociation;
+  Counter;
+  Test;
+  CounterView;
+  Model;
+  EmailService;
+  CounterController;
+  SMSService;
+  Cache;
+  View -- MVAssociation [ weight="0.1111111111111111" label="0,11" ];
+  ServiceLocator -- InitialContext [ weight="0.1111111111111111" label="0,11" ];
+  ServiceLocator -- Cache [ weight="0.2222222222222222" label="0,22" ];
+  Test -- CounterView [ weight="0.1111111111111111" label="0,11" ];
+  CounterView -- Counter [ weight="0.1111111111111111" label="0,11" ];
+  Model -- MVAssociation [ weight="0.1111111111111111" label="0,11" ];
+  CounterController -- Counter [ weight="0.2222222222222222" label="0,22" ];
+}
