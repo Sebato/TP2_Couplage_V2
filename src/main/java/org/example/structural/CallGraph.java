@@ -346,12 +346,6 @@ public class CallGraph {
         //tant qu'on peut regrouper des clusters
         while(clusterGraph.vertexSet().size()>1 && !stop) {
 
-//            //DEBUG : wait for user input
-//            Scanner sc = new Scanner(System.in);
-//            System.out.println("\n----------\nAppuyez sur entrée pour continuer");
-//            sc.nextLine();
-//            System.out.println("\n -- taille du cluster : "+clusterGraph.vertexSet().size());
-
             //on récupère les classes de l'arête avec la plus forte pondération
             Pair<String, String> fuseNodes = clusterProches();
 
@@ -489,7 +483,7 @@ public class CallGraph {
         //les Modules déja identifiés seront stockés dans this.clusterList
         //attention on supprime jamais le premier élément qui etait le cluster final !!
 
-        //le nombre de clusters identifiés
+        //le nombre de modules identifiés
         int cpt = this.clusterList.size()-1;
 
         //si on a atteint la taille max on s'arrête
