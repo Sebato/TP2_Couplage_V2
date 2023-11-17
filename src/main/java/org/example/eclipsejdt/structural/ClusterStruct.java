@@ -1,4 +1,4 @@
-package org.example.structural;
+package org.example.eclipsejdt.structural;
 
 import java.util.ArrayList;
 import java.util.Comparator;

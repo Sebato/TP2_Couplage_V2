@@ -1,10 +1,10 @@
-package org.example.structural;
+package org.example.eclipsejdt.structural;
 
 import org.apache.commons.lang3.tuple.*;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.example.visitors.MethodDeclarationVisitor;
+import org.example.eclipsejdt.visitors.MethodDeclarationVisitor;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 import org.jgrapht.nio.Attribute;
@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import static org.example.structural.ClusterStruct.ComparatorCouplage;
+import static org.example.eclipsejdt.structural.ClusterStruct.ComparatorCouplage;
 
 public class CallGraph {
 

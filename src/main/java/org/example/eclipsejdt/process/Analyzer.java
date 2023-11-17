@@ -1,12 +1,13 @@
-package org.example.process;
+package org.example.eclipsejdt.process;
 
-import org.example.visitors.*;
-import org.eclipse.jdt.core.dom.*;
-import org.example.structural.CallGraph;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.example.eclipsejdt.structural.CallGraph;
+import org.example.eclipsejdt.visitors.ClassDeclarationVisitor;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class Analyzer {
     private final ProjectHandler ph;

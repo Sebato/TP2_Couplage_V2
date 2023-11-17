@@ -1,14 +1,9 @@
-package org.example.main;
+package org.example.eclipsejdt.main;
 
-import org.example.process.Analyzer;
-import org.example.structural.CallGraph;
-import org.example.structural.ClusterStruct;
-import spoon.Launcher;
-import spoon.reflect.declaration.CtClass;
+import org.example.eclipsejdt.process.Analyzer;
+import org.example.eclipsejdt.structural.CallGraph;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {

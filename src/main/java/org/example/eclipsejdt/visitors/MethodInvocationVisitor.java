@@ -1,4 +1,4 @@
-package org.example.visitors;
+package org.example.eclipsejdt.visitors;
 
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.MethodInvocation;

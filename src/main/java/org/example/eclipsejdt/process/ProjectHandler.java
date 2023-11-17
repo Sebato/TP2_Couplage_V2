@@ -1,4 +1,4 @@
-package org.example.process;
+package org.example.eclipsejdt.process;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.JavaCore;
