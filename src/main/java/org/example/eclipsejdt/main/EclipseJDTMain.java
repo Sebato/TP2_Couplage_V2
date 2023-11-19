@@ -13,7 +13,8 @@ public class EclipseJDTMain {
         CallGraph cg = new CallGraph();
 
         Scanner sc = new Scanner(System.in);
-        System.out.println("veuillez entrer le chemin du projet que vous souhaitez analyser : ");
+        System.out.println("veuillez entrer le chemin du projet que vous souhaitez analyser : "
+                + "\n(ne rien mettre pour analyser l'application actuele)");
         String path = sc.nextLine();
 
         if (path.isEmpty()) {
@@ -50,8 +51,7 @@ public class EclipseJDTMain {
         //   - créer un fichier .dot à partir du graphe à l'emplacement spécifié
         cg.exportGraphToDot(outPath);
 
-        System.out.println("\n----------\nappuyez sur entrée pour passer au clustering");
-        sc.nextLine();
+        System.out.println("\n----------\nclustering en cours");
 
         //clustering() va :
         //   - créer un cluster hierarchique à partir du graphe

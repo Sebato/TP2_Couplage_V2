@@ -51,8 +51,12 @@ public class SpoonMain {
         SimpleWeightedGraph<CtType<?>, DefaultWeightedEdge> graph = c.graph;
         CallGraph2.exportGraphToDot(graph, outPath);
 
+
+
         //Question 2 :
         DendroBuilder builder = new DendroBuilder(c);
+        System.out.println("\n----------\nclustering en cours");
+
         Dendrogram dendro = builder.buildCluster();
 
         System.out.println("Dendrogramme généré: \n" + dendro.toString());
