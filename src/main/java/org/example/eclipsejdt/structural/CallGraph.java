@@ -228,30 +228,7 @@ public class CallGraph {
         }
     }
 
-    //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération et cette valeur
-    private Pair<String,String> clusterProches() {
-        double maxPond = 0;
-        double eWeight;
-        String c1 = null, c2 = null;
 
-        //si il n'y a plus d'arêtes on renvoie null
-        if (clusterGraph.edgeSet().isEmpty()) return null;
-
-        //on récupère les classes de l'arête avec la plus forte pondération
-        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
-
-            //poids de l'arête en cours
-            eWeight = clusterGraph.getEdgeWeight(e);
-
-            //comparaison et mise à jour du max
-            if( eWeight > maxPond) {
-                maxPond = eWeight;
-                c1 = clusterGraph.getEdgeSource(e);
-                c2 = clusterGraph.getEdgeTarget(e);
-            }
-        }
-        return new ImmutablePair<>(c1, c2);
-    }
 
 
 
@@ -457,6 +434,31 @@ public class CallGraph {
 
     }
 
+    //Methode qui renvoie les deux classes sur l'arête avec la plus forte pondération et cette valeur
+    private Pair<String,String> clusterProches() {
+        double maxPond = 0;
+        double eWeight;
+        String c1 = null, c2 = null;
+
+        //si il n'y a plus d'arêtes on renvoie null
+        if (clusterGraph.edgeSet().isEmpty()) return null;
+
+        //on récupère les classes de l'arête avec la plus forte pondération
+        for (DefaultWeightedEdge e : clusterGraph.edgeSet().stream().toList()){
+
+            //poids de l'arête en cours
+            eWeight = clusterGraph.getEdgeWeight(e);
+
+            //comparaison et mise à jour du max
+            if( eWeight > maxPond) {
+                maxPond = eWeight;
+                c1 = clusterGraph.getEdgeSource(e);
+                c2 = clusterGraph.getEdgeTarget(e);
+            }
+        }
+        return new ImmutablePair<>(c1, c2);
+    }
+
     //Méthode d’indentification des groupes de  classes  couplées
     // (services / composants / modules / fonctionnalités)
     // à partir du cluster hierarchique
@@ -470,14 +472,16 @@ public class CallGraph {
 
         // on va considérer que les classes qui n'avaient pas de couplage ne peuvent pas être dans un module
 
-        // on regarde la moyenne de couplage de notre Cluster.
-        // si elle est > à CP ET qu'une des branches n'est pas une classe isolée :
-        //      on regarde la moyenne de couplage de ses deux sous clusters.
-        //          si les deux sont > à CP
-        //              on recommence l'algo sur eux individuellement.
-        //          sinon si une est = 0 mais pas l'autre :
+        //si le nombre de modules identifiés est inférieur à M/2
+        //  si la moyenne de couplage de notre Cluster > à CP
+        //      on regarde les moyennes de couplage moy1 et moy2 de ses deux sous clusters s1 et s2
+        //          si moy1 > à CP et moy2 > à CP
+        //              on recommence l'algo sur s1 et s2.
+        //          sinon si moy1 > CP et moy2 == 0 ET s2 non isolée
         //              on lance l'algo sur l'autre individuellement.
-        //          sinon si les deux sont > 0 mais < CP :
+        //          sinon si moy2 > CP et moy1 == 0 ET s1 non isolée
+        //              on lance l'algo sur l'autre individuellement.
+        //          sinon s1 ou s2 aura un couplage interne insuffisant de toute façon
         //              on ajoute le cluster actuel à la liste des clusters identifiés.
 
         //les Modules déja identifiés seront stockés dans this.clusterList

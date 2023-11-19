@@ -13,7 +13,7 @@ import spoon.reflect.declaration.CtType;
 import java.util.Scanner;
 
 public class SpoonMain {
-    public void Spoonmain(String[] args) {
+    public static void Spoonmain(String[] args) {
         //disable log4j strange warnings
         System.setProperty("org.apache.logging.log4j.simplelog.StatusLogger.level", "OFF");
 
@@ -38,8 +38,18 @@ public class SpoonMain {
 
         //Question 1 :
         //export the graph to a .dot file
+        System.out.println("\n----------\nVeuillez entrer un nom pour le nouveau fichier .dot généré : ");
+        String name = sc.nextLine();
+        String outPath;
+
+        if (name.isEmpty()) {
+            outPath = System.getProperty("user.dir")+"/Graphes/g.dot";
+        }else {
+            outPath = System.getProperty("user.dir") + "/Graphes/" + name + ".dot";
+        }
+
         SimpleWeightedGraph<CtType<?>, DefaultWeightedEdge> graph = c.graph;
-        CallGraph2.exportGraphToDot(graph, System.getProperty("user.dir")+"/Graphes/graph.dot");
+        CallGraph2.exportGraphToDot(graph, outPath);
 
         //Question 2 :
         DendroBuilder builder = new DendroBuilder(c);

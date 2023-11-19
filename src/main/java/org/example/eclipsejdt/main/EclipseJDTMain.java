@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.util.Scanner;
 
 public class EclipseJDTMain {
-    public void eclipseJDTmain(String[] args) throws IOException {
+    public static void eclipseJDTmain(String[] args) throws IOException {
 
         Analyzer analyzer;
         CallGraph cg = new CallGraph();

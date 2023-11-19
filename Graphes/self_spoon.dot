@@ -1,0 +1,30 @@
+strict graph G {
+  CallGraph2;
+  SpoonMain;
+  ClusterStruct;
+  MethodInvocationVisitor;
+  Dendrogram;
+  Analyzer;
+  ClassDeclarationVisitor;
+  EclipseJDTMain;
+  ProjectHandler;
+  DoubleMain;
+  CallGraph;
+  DendroBuilder;
+  MethodDeclarationVisitor;
+  SpoonMain -- CallGraph2 [ weight="0.07894736842105263" label="0,08" ];
+  SpoonMain -- DendroBuilder [ weight="0.07894736842105263" label="0,08" ];
+  SpoonMain -- Dendrogram [ weight="0.05263157894736842" label="0,05" ];
+  Analyzer -- CallGraph [ weight="0.10526315789473684" label="0,11" ];
+  Analyzer -- ClassDeclarationVisitor [ weight="0.07894736842105263" label="0,08" ];
+  Analyzer -- ProjectHandler [ weight="0.05263157894736842" label="0,05" ];
+  EclipseJDTMain -- CallGraph [ weight="0.13157894736842105" label="0,13" ];
+  EclipseJDTMain -- Analyzer [ weight="0.02631578947368421" label="0,03" ];
+  DoubleMain -- SpoonMain [ weight="0.02631578947368421" label="0,03" ];
+  DoubleMain -- EclipseJDTMain [ weight="0.02631578947368421" label="0,03" ];
+  CallGraph -- ClusterStruct [ weight="0.02631578947368421" label="0,03" ];
+  CallGraph -- MethodDeclarationVisitor [ weight="0.02631578947368421" label="0,03" ];
+  DendroBuilder -- CallGraph2 [ weight="0.07894736842105263" label="0,08" ];
+  DendroBuilder -- Dendrogram [ weight="0.18421052631578946" label="0,18" ];
+  MethodDeclarationVisitor -- MethodInvocationVisitor [ weight="0.02631578947368421" label="0,03" ];
+}
